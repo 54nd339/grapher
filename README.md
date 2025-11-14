@@ -1,36 +1,303 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Grapher - Advanced Mathematical Graphing & Computation Platform
 
-## Getting Started
+A comprehensive Desmos-like graphing calculator built with Next.js, featuring 2D/3D graphing, calculus operations, matrix/vector computations, and equation solving.
 
-First, run the development server:
+## 🚀 Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+### 📊 Graphing Capabilities
+- **2D Graphing**: Plot explicit and implicit functions with real-time rendering using Mafs
+- **3D Graphing**: Interactive 3D surface plots with Plotly.js
+- **Parametric Equations**: Support for parametric curve plotting
+- **Polar Coordinates**: Visualize polar equations
+- **Implicit Functions**: Plot implicit equations (e.g., x^2+y^2=25)
+- **Mouse Wheel Zoom**: Smooth zooming centered at cursor position
+- **Coordinate Display**: Real-time hover coordinates
+- **Toggleable Sidebar**: Maximize graph viewing area
+
+### 🧮 Advanced Calculations
+- **Derivatives**: Symbolic and numerical differentiation
+- **Integrals**: Definite integration using symbolic and numerical methods
+- **Equation Solver**: Solve linear and nonlinear equations
+- **Matrix Operations**: Add, subtract, multiply, inverse, determinant, transpose, eigenvalues
+- **Vector Operations**: Dot product, cross product, magnitude, normalization, projection
+- **LaTeX Rendering**: Beautiful equation display with react-katex
+
+### ⚡ Performance & UX
+- Real-time graph rendering with expression caching
+- Multi-equation support with color coding
+- Customizable graph settings (ranges, grid)
+- Dark mode support
+- Responsive design for all devices
+- Optimized computation using nerdamer
+- Adaptive grid spacing based on zoom level
+- Dynamic sampling for smooth curves
+
+## 🛠️ Tech Stack
+
+### Core Framework
+- **Next.js 16** - React framework with App Router
+- **React 19** - UI library
+- **TypeScript 5** - Type safety
+- **Tailwind CSS 4** - Styling
+
+### Mathematical Libraries
+- **nerdamer** - Symbolic mathematics engine
+- **Mafs 0.21.0** - High-performance 2D graphing
+- **Plotly.js** - Interactive 3D visualizations
+- **react-katex** - LaTeX equation rendering
+
+### State Management
+- **Zustand** - Lightweight state management
+
+### 3D Rendering
+- **Three.js** - 3D graphics library
+- **@react-three/fiber** - React renderer for Three.js
+- **@react-three/drei** - Useful helpers for react-three-fiber
+
+## 📁 Project Structure
+
+```
+grapher/
+├── app/
+│   ├── components/          # React components
+│   │   ├── Graph2D.tsx      # 2D graph renderer (Mafs)
+│   │   ├── Graph3D.tsx      # 3D graph renderer (Plotly)
+│   │   ├── EquationInput.tsx # Equation input panel
+│   │   ├── Calculator.tsx   # Advanced calculator
+│   │   └── Settings.tsx     # Graph settings panel
+│   ├── lib/                 # Core logic
+│   │   ├── mathEngine.ts    # Mathematical computation engine
+│   │   ├── store.ts         # Zustand state management
+│   │   └── utils.ts         # Utility functions
+│   ├── types/               # TypeScript definitions
+│   │   └── index.ts         # Type definitions
+│   ├── styles/              # Additional styles
+│   ├── globals.css          # Global styles
+│   ├── layout.tsx           # Root layout
+│   └── page.tsx             # Main page
+├── public/                  # Static assets
+├── package.json             # Dependencies
+├── tsconfig.json            # TypeScript config
+├── next.config.ts           # Next.js config
+└── README.md                # Documentation
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🚦 Getting Started
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Prerequisites
+- Node.js 20.x or higher
+- npm, yarn, or pnpm
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Installation
 
-## Learn More
+1. **Clone the repository**
+```bash
+git clone <repository-url>
+cd grapher
+```
 
-To learn more about Next.js, take a look at the following resources:
+2. **Install dependencies**
+```bash
+npm install
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3. **Run development server**
+```bash
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4. **Open browser**
+Navigate to [http://localhost:3000](http://localhost:3000)
 
-## Deploy on Vercel
+### Build for Production
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run build
+npm start
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📖 Usage Guide
+
+### Adding Equations
+
+1. Select graph mode (2D, 3D, Parametric, Polar, Implicit)
+2. Enter equation in the input field
+   - **2D**: `x^2`, `sin(x)`, `log(x)`
+   - **3D**: `sin(sqrt(x^2 + y^2))`, `x^2 + y^2`
+3. Click "Add Equation"
+4. Toggle visibility or remove equations as needed
+
+### Calculator Operations
+
+#### Derivatives
+1. Select "Derivative" mode
+2. Enter function (e.g., `x^2 + 2*x + 1`)
+3. Specify variable (default: `x`)
+4. Optionally enter point for evaluation
+5. Click "Calculate"
+
+#### Integrals
+1. Select "Integral" mode
+2. Enter function (e.g., `x^2`)
+3. Set lower and upper bounds
+4. Click "Calculate"
+
+#### Matrix Operations
+1. Select "Matrix" mode
+2. Enter matrices in format: `[[1,2],[3,4]]`
+3. Operations: multiply, add, subtract, inverse, determinant, transpose, eigenvalues
+
+#### Vector Operations
+1. Select "Vector" mode
+2. Enter vectors in format: `[1,2,3]`
+3. Operations: dot, cross, magnitude, normalize, projection
+
+#### Equation Solver
+1. Select "Solve" mode
+2. Enter equation (e.g., `x^2 - 4 = 0`)
+3. Specify variable
+4. Click "Calculate"
+
+### Graph Settings
+
+- **Axis Ranges**: Customize X, Y, Z ranges
+- **Display Options**: Toggle grid, axes, labels
+- **Graph Mode**: Switch between 2D/3D/Parametric/Polar/Implicit
+
+## 🎨 Supported Mathematical Functions
+
+### Basic Operations
+- Addition: `+`
+- Subtraction: `-`
+- Multiplication: `*`
+- Division: `/`
+- Exponentiation: `^` or `**`
+
+### Functions
+- Trigonometric: `sin()`, `cos()`, `tan()`, `asin()`, `acos()`, `atan()`
+- Hyperbolic: `sinh()`, `cosh()`, `tanh()`
+- Exponential: `exp()`, `log()`, `log10()`, `ln()`
+- Root: `sqrt()`, `cbrt()`
+- Absolute: `abs()`
+- Rounding: `round()`, `ceil()`, `floor()`
+
+### Constants
+- Pi: `pi` or `PI`
+- Euler's number: `e` or `E`
+
+## 🔧 Configuration
+
+### Customizing Graph Settings
+
+Edit default settings in `app/lib/store.ts`:
+
+```typescript
+const defaultGraphSettings: GraphSettings = {
+  xMin: -10,
+  xMax: 10,
+  yMin: -10,
+  yMax: 10,
+  zMin: -10,
+  zMax: 10,
+  gridEnabled: true,
+  axesEnabled: true,
+  labelsEnabled: true,
+  backgroundColor: '#ffffff',
+  gridColor: '#e5e7eb',
+  axesColor: '#000000',
+};
+```
+
+## 🧪 Examples
+
+### 2D Functions
+```
+x^2
+sin(x)
+cos(x) * sin(x)
+exp(-x^2)
+1/x
+abs(x)
+log(x)
+sqrt(x)
+```
+
+### 3D Functions
+```
+sin(sqrt(x^2 + y^2))
+x^2 + y^2
+cos(x) * sin(y)
+exp(-(x^2 + y^2))
+x^2 - y^2
+```
+
+### Parametric Equations
+```
+x = cos(t), y = sin(t)
+x = t, y = t^2
+```
+
+### Polar Equations
+```
+r = cos(3*theta)
+r = 1 + sin(theta)
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these guidelines:
+
+1. Fork the repository
+2. Create a feature branch
+3. Follow existing code patterns
+4. Write clean, documented code
+5. Test your changes
+6. Submit a pull request
+
+## 📝 Code Standards
+
+- **TypeScript**: Strict mode enabled
+- **Components**: Functional components with hooks
+- **Naming**: PascalCase for components, camelCase for functions
+- **Comments**: JSDoc style documentation
+- **Formatting**: Prettier/ESLint configured
+
+## 🐛 Known Issues
+
+- Some complex 3D equations may have performance limitations
+- Symbolic integration not fully implemented (uses numerical methods)
+- System of equations solver is simplified
+
+## 🔮 Future Enhancements
+
+- [ ] Symbolic integration support
+- [ ] Advanced equation solver (Newton-Raphson, etc.)
+- [ ] Animation support for parametric equations
+- [ ] Export graphs as images/SVG
+- [ ] Share equations via URL
+- [ ] Touch/gesture controls for mobile
+- [ ] More color schemes and themes
+- [ ] Equation library/presets
+- [ ] LaTeX input support
+- [ ] Statistical analysis tools
+
+## 📄 License
+
+This project is open source and available under the MIT License.
+
+## 🙏 Acknowledgments
+
+- [mathjs](https://mathjs.org/) - Extensive mathematics library
+- [Mafs](https://mafs.dev/) - Beautiful math visualizations
+- [Plotly.js](https://plotly.com/javascript/) - Interactive graphing
+- [Desmos](https://www.desmos.com/) - Inspiration for UI/UX
+- [emathhelp.net](https://www.emathhelp.net/) - Calculation features inspiration
+
+## 📧 Support
+
+For issues, questions, or suggestions, please open an issue on GitHub.
+
+---
+
+**Built with ❤️ using Next.js, React, and modern web technologies**
+

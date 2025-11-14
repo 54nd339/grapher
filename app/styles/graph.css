@@ -1,0 +1,80 @@
+/* Custom styles for graphs */
+
+.mafs-view {
+  border-radius: 0.75rem;
+}
+
+/* Modern scrollbar styling */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%);
+  box-shadow: 0 0 6px rgba(102, 126, 234, 0.5);
+}
+
+/* Firefox scrollbar */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #667eea rgba(0, 0, 0, 0.05);
+}
+
+/* Customize Mafs grid colors for better visibility */
+.mafs-cartesian-coordinates {
+  --mafs-bg: transparent;
+  --mafs-fg: #9ca3af;
+  --mafs-origin-color: #374151;
+}
+
+.dark .mafs-cartesian-coordinates {
+  --mafs-fg: #4b5563;
+  --mafs-origin-color: #6b7280;
+}
+
+/* Smooth transitions for plot lines */
+.mafs-line {
+  transition: stroke-width 0.2s ease;
+}
+
+.mafs-line:hover {
+  stroke-width: 4px !important;
+  filter: brightness(1.2);
+}
+
+/* Grid lines styling */
+.mafs-grid-line {
+  stroke: var(--mafs-fg);
+  stroke-width: 0.5;
+  opacity: 0.15;
+}
+
+/* Axis lines - make them more prominent */
+.mafs-cartesian-coordinates line[stroke="var(--mafs-origin-color)"] {
+  stroke-width: 2;
+  opacity: 0.9;
+}
+
+/* Labels */
+.mafs-cartesian-coordinates text {
+  font-size: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 500;
+  fill: #374151;
+}
+
+.dark .mafs-cartesian-coordinates text {
+  fill: #9ca3af;
+}

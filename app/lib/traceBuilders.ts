@@ -28,6 +28,7 @@ export type ParametricTraceOptions = {
   expression: string;
   color: string;
   name: string;
+  animated?: boolean;
 };
 
 export type PolarTraceOptions = {
@@ -162,6 +163,7 @@ export const buildParametricTrace = ({
   expression,
   color,
   name,
+  animated = false,
 }: ParametricTraceOptions): Data | null => {
   const parts = expression.split(",");
   let xExpr = "";
@@ -175,6 +177,17 @@ export const buildParametricTrace = ({
   }
 
   if (!xExpr || !yExpr) return null;
+
+  if (animated) {
+    return {
+      type: 'scattergl',
+      mode: 'lines',
+      line: { color, width: 2 },
+      x: [],
+      y: [],
+      name,
+    } satisfies Data;
+  }
 
   const tMin = -2 * Math.PI;
   const tMax = 2 * Math.PI;

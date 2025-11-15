@@ -5,9 +5,8 @@ import type {
 } from "@/types";
 
 import {
-  describeIntegralFailure,
   integrateSymbolically,
-} from "./symbolicIntegration";
+} from "./integration";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type NerdamerInstance = any | undefined;
@@ -95,7 +94,10 @@ export const calculateIntegral = (
           mode: "integral",
           input: expression,
           result: `${symbolic.result} + C`,
-          steps: symbolic.steps,
+          latex: symbolic.latex ? `${symbolic.latex} + C` : undefined,
+          method: symbolic.method,
+          discontinuities: symbolic.discontinuities,
+          domainIssues: symbolic.domainIssues,
         };
       }
 
@@ -140,7 +142,10 @@ export const calculateIntegral = (
         mode: "integral",
         input: expression,
         result,
-        steps: symbolic.ok ? symbolic.steps : undefined,
+        latex: symbolic.latex,
+        method: symbolic.method,
+        discontinuities: symbolic.discontinuities,
+        domainIssues: symbolic.domainIssues,
       };
     } catch (error) {
       const f = (x: number) => evaluateFn(expression, { [variable]: x });
@@ -150,12 +155,11 @@ export const calculateIntegral = (
         mode: "integral",
         input: expression,
         result,
+        numericApprox: typeof result === 'number' ? result : undefined,
+        method: 'numerical',
         error: (error as Error).message,
-        steps: [
-          symbolic.ok && symbolic.result
-            ? `Symbolic attempt failed; approximated numerically after trying ${symbolic.method}`
-            : describeIntegralFailure(expression, variable, options),
-        ].filter(Boolean) as string[],
+        discontinuities: symbolic.discontinuities,
+        domainIssues: symbolic.domainIssues,
       };
     }
   } catch (error) {

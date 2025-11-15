@@ -22,6 +22,20 @@ export interface Equation {
     y?: [number, number];
     z?: [number, number];
   };
+  animation?: {
+    enabled: boolean;
+    tStart: number;
+    tEnd: number;
+    speed: number; // units of t per second before easing
+    loop: boolean;
+    easing: 'linear' | 'easeInOut' | 'quadIn' | 'quadOut' | 'cubicInOut';
+    resolution?: number; // max points
+    lastT?: number; // internal tracking
+    playing?: boolean; // playback state
+    scrubbing?: boolean; // user actively scrubbing timeline
+    minFrameMs?: number; // performance throttle
+    lastFrameTs?: number; // internal frame timestamp
+  };
 }
 
 export interface Point {
@@ -49,6 +63,7 @@ export interface GraphSettings {
   exportFormat: 'png' | 'svg' | 'jpeg' | 'webp';
   animationEnabled: boolean;
   animationDuration: number;
+  animationPlaybackSpeed?: number; // global multiplier
 }
 
 export interface CalculationInput {
@@ -66,6 +81,11 @@ export interface CalculationResult {
   steps?: string[];
   graph?: unknown;
   error?: string;
+  latex?: string;
+  method?: string;
+  numericApprox?: number;
+  discontinuities?: number[];
+  domainIssues?: string[];
 }
 
 export interface MatrixOperation {

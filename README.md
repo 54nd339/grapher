@@ -352,6 +352,9 @@ The project uses GitHub Actions for continuous integration and deployment:
 
 ## 🔮 Future Enhancements
 
+- [ ] Animation support for parametric equations
+- [ ] Equation library/presets
+- [ ] Math Symbol Keyboard
 - [ ] Advanced equation solver (Newton-Raphson, etc.)
 - [ ] Share equations via URL
 - [ ] In-app theme editor/preset sharing

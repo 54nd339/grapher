@@ -10,6 +10,10 @@ interface AppStore {
   toggleEquationVisibility: (id: string) => void;
   clearEquations: () => void;
 
+  // Animated selection
+  selectedAnimatedEquationId: string | null;
+  setSelectedAnimatedEquation: (id: string | null) => void;
+
   // Graph settings
   graphSettings: GraphSettings;
   updateGraphSettings: (settings: Partial<GraphSettings>) => void;
@@ -57,6 +61,7 @@ export const useAppStore = create<AppStore>((set) => ({
   selectedMode: '2d',
   calculationMode: null,
   results: [],
+  selectedAnimatedEquationId: null,
 
   // Equation actions
   addEquation: (equation) =>
@@ -110,4 +115,7 @@ export const useAppStore = create<AppStore>((set) => ({
     })),
 
   clearResults: () => set({ results: [] }),
+
+  // Animated equation selection
+  setSelectedAnimatedEquation: (id) => set({ selectedAnimatedEquationId: id }),
 }));

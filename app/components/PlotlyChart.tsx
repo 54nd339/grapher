@@ -30,6 +30,7 @@ const loadPlotly = (() => {
 
 export type PlotlyChartHandle = {
   resize: () => void;
+  getPlot: () => PlotlyHTMLElement | null;
 };
 
 export type PlotlyChartProps = {
@@ -159,6 +160,7 @@ const PlotlyChart = forwardRef<PlotlyChartHandle, PlotlyChartProps>(
             plotlyModuleRef.current.Plots.resize(containerRef.current);
           }
         },
+        getPlot: () => plotElement,
       }),
       [plotElement, scheduleRender]
     );

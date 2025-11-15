@@ -135,6 +135,17 @@ export const equationInputStyles = {
     ...surfaceAltFill,
     borderColor: themeVar('borderMuted'),
   },
+  preview: surfaceAltPanel,
+  modeButton: {
+    active: {
+      background: themeVar('primary'),
+      color: themeVar('textOnAccent'),
+    },
+    inactive: {
+      ...surfaceAltFill,
+      color: themeVar('textMuted'),
+    },
+  },
   addButton: {
     background: gradientPrimary,
     color: themeVar('textOnAccent'),
@@ -156,11 +167,21 @@ export const graph2DStyles = {
     color: themeVar('text'),
   },
   emptyState: textMuted,
+  overlayCard: {
+    background: themeVar('surfaceAlt'),
+    color: themeVar('text'),
+    borderColor: themeVar('border'),
+  },
 } as const;
 
 export const graph3DStyles = {
   container: surfacePanel,
   emptyState: textMuted,
+  overlayCard: {
+    background: themeVar('surfaceAlt'),
+    color: themeVar('text'),
+    borderColor: themeVar('border'),
+  },
 } as const;
 
 export const settingsStyles = {

@@ -1,6 +1,8 @@
-# Grapher - Advanced Mathematical Graphing & Computation Platform
+# Grapher 📐
 
-A comprehensive Desmos-like graphing calculator built with Next.js, featuring 2D/3D graphing, calculus operations, matrix/vector computations, and equation solving.
+> **Advanced Mathematical Graphing & Computation Platform**
+
+A comprehensive Desmos-like graphing calculator built with Next.js 16, featuring real-time 2D/3D graphing, calculus operations, matrix/vector computations, equation solving, and a beautiful theme system with mobile-optimized touch interactions.
 
 ## 🚀 Features
 
@@ -26,11 +28,14 @@ A comprehensive Desmos-like graphing calculator built with Next.js, featuring 2D
 - Real-time graph rendering with expression caching
 - Multi-equation support with color coding
 - Customizable graph settings (ranges, grid)
-- Rich theming system with system/solarized/neon palettes and auto OS detection
+- Rich theming system with 11 presets and auto OS detection
+- **Mobile-optimized** with touch gestures and swipe navigation
+- Hardware-accelerated animations and transitions
 - Responsive design for all devices
 - Optimized computation using nerdamer
 - Adaptive grid spacing based on zoom level
 - Dynamic sampling for smooth curves
+- Custom hooks architecture for code reusability
 
 ## 🛠️ Tech Stack
 
@@ -56,33 +61,61 @@ The UI uses a centralized theme registry located under `app/theme/presets`.
 - `ThemeProvider` listens to `prefers-color-scheme` and swaps tokens automatically, so buttons/inputs/text adjust instantly when the OS theme changes.
 - Equation colors are sourced from each theme's `equationPalette`, ensuring plotted traces always contrast against the current background.
 - To add a theme, append a new object to `themeOptions`; every component reads variables via CSS custom properties so no component changes are required.
-- Global CSS lives in `app/globals.css`, which seeds Tailwind, exposes CSS custom property fallbacks, and defines both the default modern scrollbar plus a `.custom-scrollbar` helper for opt-in containers.
+- Modular CSS architecture in `app/styles/` with separate files for variables, base styles, scrollbars, mobile optimizations, animations, and components.
 
 ## 📁 Project Structure
 
 ```
 grapher/
+├── .github/
+│   └── workflows/           # GitHub Actions CI/CD
+│       ├── docker-merge.yml # Docker build on main branch
+│       └── docker-pull-request.yml # Docker build on PRs
 ├── app/
 │   ├── components/          # React components
 │   │   ├── Graph2D.tsx      # 2D graph renderer (Plotly)
 │   │   ├── Graph3D.tsx      # 3D graph renderer (Plotly)
 │   │   ├── EquationInput.tsx # Equation input panel
 │   │   ├── Calculator.tsx   # Advanced calculator
-│   │   └── Settings.tsx     # Graph settings panel
+│   │   ├── Settings.tsx     # Graph settings panel
+│   │   ├── MobileSidebar.tsx # Mobile-optimized sidebar
+│   │   ├── ThemeSwitcher.tsx # Theme selection UI
+│   │   └── calculatorForms/ # Calculator form components
+│   ├── hooks/               # Custom React hooks
+│   │   ├── useMediaQuery.ts # Responsive media queries
+│   │   ├── useMobileGestures.ts # Touch gesture handling
+│   │   ├── useLatexInput.ts # LaTeX validation logic
+│   │   ├── useLocalStorage.ts # Persistent storage hook
+│   │   └── useClickOutside.ts # Outside click detection
 │   ├── lib/                 # Core logic
 │   │   ├── mathEngine.ts    # Mathematical computation engine
 │   │   ├── store.ts         # Zustand state management
-│   │   └── utils.ts         # Utility functions
+│   │   ├── utils.ts         # Utility functions
+│   │   ├── latex.ts         # LaTeX conversion utilities
+│   │   └── math/            # Math operation modules
+│   ├── styles/              # Modular CSS architecture
+│   │   ├── variables.css    # CSS custom properties
+│   │   ├── base.css         # Base element styles
+│   │   ├── scrollbar.css    # Scrollbar styling
+│   │   ├── mobile.css       # Mobile optimizations
+│   │   ├── animations.css   # Keyframe animations
+│   │   └── components.css   # Component utilities
 │   ├── types/               # TypeScript definitions
 │   │   └── index.ts         # Type definitions
 │   ├── theme/               # Centralized theming system
-│   ├── globals.css          # Tailwind + theme variables + scrollbar styles
+│   │   ├── ThemeProvider.tsx # Theme context provider
+│   │   ├── presets/         # Theme presets (11 themes)
+│   │   ├── styles.ts        # Component styling utilities
+│   │   └── themeVars.ts     # CSS variable helpers
+│   ├── globals.css          # Main CSS entry (imports modular styles)
 │   ├── layout.tsx           # Root layout
 │   └── page.tsx             # Main page
 ├── public/                  # Static assets
+├── .dockerignore            # Docker ignore file
+├── Dockerfile               # Multi-stage Docker build
 ├── package.json             # Dependencies
 ├── tsconfig.json            # TypeScript config
-├── next.config.ts           # Next.js config
+├── next.config.ts           # Next.js config (standalone output)
 └── README.md                # Documentation
 ```
 
@@ -96,18 +129,26 @@ grapher/
 
 1. **Clone the repository**
 ```bash
-git clone <repository-url>
+git clone https://github.com/54nd339/grapher.git
 cd grapher
 ```
 
 2. **Install dependencies**
 ```bash
 npm install
+# or
+yarn install
+# or
+pnpm install
 ```
 
 3. **Run development server**
 ```bash
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
 ```
 
 4. **Open browser**
@@ -116,8 +157,21 @@ Navigate to [http://localhost:3000](http://localhost:3000)
 ### Build for Production
 
 ```bash
+# Build the application
 npm run build
+
+# Start production server
 npm start
+```
+
+### Docker Deployment
+
+```bash
+# Build Docker image
+docker build -t grapher .
+
+# Run container
+docker run -p 3000:3000 grapher
 ```
 
 ## 📖 Usage Guide
@@ -251,12 +305,36 @@ r = 1 + sin(theta)
 
 Contributions are welcome! Please follow these guidelines:
 
-1. Fork the repository
-2. Create a feature branch
-3. Follow existing code patterns
-4. Write clean, documented code
-5. Test your changes
-6. Submit a pull request
+1. **Fork the repository**
+2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
+3. **Follow existing code patterns** and architecture
+4. **Write clean, documented code** with TypeScript types
+5. **Extract reusable logic** into custom hooks
+6. **Test your changes** thoroughly
+7. **Commit your changes** (`git commit -m 'Add amazing feature'`)
+8. **Push to the branch** (`git push origin feature/amazing-feature`)
+9. **Open a Pull Request**
+
+All PRs will be automatically checked by CI for:
+- **Docker Build**: Multi-platform Docker image build verification
+- **Platform Support**: Validates builds for linux/amd64 and linux/arm64
+
+### CI/CD Pipeline
+
+The project uses GitHub Actions for continuous integration and deployment:
+
+- **`docker-pull-request.yml`**: Builds Docker images on pull requests
+  - Triggers on pull requests from the same repository
+  - Multi-platform builds (amd64, arm64)
+  - Pushes to Docker Hub as `54nd33p/grapher:latest`
+  - Uses Docker layer caching for faster builds
+  - Validates that the Docker build succeeds before merging
+
+- **`docker-merge.yml`**: Builds and publishes Docker images on main branch
+  - Triggers automatically on push to main branch
+  - Multi-platform builds (amd64, arm64)
+  - Publishes to Docker Hub as `54nd33p/grapher:latest`
+  - Uses registry caching for optimal build performance
 
 ## 📝 Code Standards
 
@@ -274,16 +352,34 @@ Contributions are welcome! Please follow these guidelines:
 
 ## 🔮 Future Enhancements
 
-- [ ] Symbolic integration support
 - [ ] Advanced equation solver (Newton-Raphson, etc.)
-- [ ] Animation support for parametric equations
-- [ ] Export graphs as images/SVG
 - [ ] Share equations via URL
-- [ ] Touch/gesture controls for mobile
 - [ ] In-app theme editor/preset sharing
-- [ ] Equation library/presets
-- [ ] LaTeX input support
 - [ ] Statistical analysis tools
+- [ ] Offline PWA support
+- [ ] Collaborative equation sharing
+
+## 🚀 Deployment
+
+### Vercel (Recommended)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/54nd339/grapher)
+
+### Docker
+
+**Pull from Docker Hub:**
+```bash
+docker pull 54nd33p/grapher:latest
+docker run -p 3000:3000 54nd33p/grapher:latest
+```
+
+**Build locally:**
+```bash
+docker build -t grapher .
+docker run -p 3000:3000 grapher
+```
+
+### Manual Deployment
+The app is configured with `output: "standalone"` for optimized deployments to any Node.js hosting platform.
 
 ## 📄 License
 
@@ -298,9 +394,17 @@ This project is open source and available under the MIT License.
 
 ## 📧 Support
 
-For issues, questions, or suggestions, please open an issue on GitHub.
+For issues, questions, or suggestions, please [open an issue](https://github.com/54nd33p/grapher/issues) on GitHub.
+
+## 🌟 Star History
+
+If you find this project useful, please consider giving it a ⭐️!
 
 ---
 
-**Built with ❤️ using Next.js, React, and modern web technologies**
+**Built with ❤️ using Next.js, Zustand, and modern web technologies**
+
+<div align="center">
+  <sub>Made by developers, for developers</sub>
+</div>
 

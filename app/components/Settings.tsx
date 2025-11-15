@@ -36,7 +36,7 @@ export default function Settings() {
             <button
               key={mode.value}
               onClick={() => setSelectedMode(mode.value)}
-              className={`px-3 py-2 rounded-lg text-sm font-medium glow-button transition-all ${
+              className={`px-3 py-2.5 rounded-lg text-sm font-medium glow-button transition-all touch-feedback active:scale-95 hw-accelerated ${
                 selectedMode === mode.value ? 'shadow-sm' : 'hover:opacity-80'
               }`}
               data-active={selectedMode === mode.value}
@@ -59,7 +59,7 @@ export default function Settings() {
               type="number"
               value={graphSettings.xMin}
               onChange={(e) => updateGraphSettings({ xMin: parseFloat(e.target.value) })}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2.5 border rounded-lg focus-ring"
               style={inputStyle}
               placeholder="Min"
             />
@@ -69,7 +69,7 @@ export default function Settings() {
               type="number"
               value={graphSettings.xMax}
               onChange={(e) => updateGraphSettings({ xMax: parseFloat(e.target.value) })}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2.5 border rounded-lg focus-ring"
               style={inputStyle}
               placeholder="Max"
             />
@@ -88,7 +88,7 @@ export default function Settings() {
               type="number"
               value={graphSettings.yMin}
               onChange={(e) => updateGraphSettings({ yMin: parseFloat(e.target.value) })}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2.5 border rounded-lg focus-ring"
               style={inputStyle}
               placeholder="Min"
             />
@@ -98,7 +98,7 @@ export default function Settings() {
               type="number"
               value={graphSettings.yMax}
               onChange={(e) => updateGraphSettings({ yMax: parseFloat(e.target.value) })}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2.5 border rounded-lg focus-ring"
               style={inputStyle}
               placeholder="Max"
             />
@@ -118,7 +118,7 @@ export default function Settings() {
                 type="number"
                 value={graphSettings.zMin}
                 onChange={(e) => updateGraphSettings({ zMin: parseFloat(e.target.value) })}
-                className="w-full px-3 py-2 border rounded-lg"
+                className="w-full px-3 py-2.5 border rounded-lg focus-ring"
                 style={inputStyle}
                 placeholder="Min"
               />
@@ -128,7 +128,7 @@ export default function Settings() {
                 type="number"
                 value={graphSettings.zMax}
                 onChange={(e) => updateGraphSettings({ zMax: parseFloat(e.target.value) })}
-                className="w-full px-3 py-2 border rounded-lg"
+                className="w-full px-3 py-2.5 border rounded-lg focus-ring"
                 style={inputStyle}
                 placeholder="Max"
               />
@@ -143,34 +143,34 @@ export default function Settings() {
           Display Options
         </label>
 
-        <label className="flex items-center space-x-3 cursor-pointer">
+        <label className="flex items-center space-x-3 cursor-pointer py-1.5 -mx-2 px-2 rounded-lg transition-colors hover:bg-black/5 active:bg-black/10">
           <input
             type="checkbox"
             checked={graphSettings.gridEnabled}
             onChange={(e) => updateGraphSettings({ gridEnabled: e.target.checked })}
-            className="w-4 h-4 rounded"
+            className="w-5 h-5 rounded"
             style={checkboxStyle}
           />
           <span className="text-sm" style={labelStyle}>Show Grid</span>
         </label>
 
-        <label className="flex items-center space-x-3 cursor-pointer">
+        <label className="flex items-center space-x-3 cursor-pointer py-1.5 -mx-2 px-2 rounded-lg transition-colors hover:bg-black/5 active:bg-black/10">
           <input
             type="checkbox"
             checked={graphSettings.axesEnabled}
             onChange={(e) => updateGraphSettings({ axesEnabled: e.target.checked })}
-            className="w-4 h-4 rounded"
+            className="w-5 h-5 rounded"
             style={checkboxStyle}
           />
           <span className="text-sm" style={labelStyle}>Show Axes</span>
         </label>
 
-        <label className="flex items-center space-x-3 cursor-pointer">
+        <label className="flex items-center space-x-3 cursor-pointer py-1.5 -mx-2 px-2 rounded-lg transition-colors hover:bg-black/5 active:bg-black/10">
           <input
             type="checkbox"
             checked={graphSettings.labelsEnabled}
             onChange={(e) => updateGraphSettings({ labelsEnabled: e.target.checked })}
-            className="w-4 h-4 rounded"
+            className="w-5 h-5 rounded"
             style={checkboxStyle}
           />
           <span className="text-sm" style={labelStyle}>Show Axis Labels</span>
@@ -183,34 +183,34 @@ export default function Settings() {
           Interaction & Toolbar
         </label>
 
-        <label className="flex items-center space-x-3 cursor-pointer">
+        <label className="flex items-center space-x-3 cursor-pointer py-1.5 -mx-2 px-2 rounded-lg transition-colors hover:bg-black/5 active:bg-black/10">
           <input
             type="checkbox"
             checked={graphSettings.scrollZoom}
             onChange={(e) => updateGraphSettings({ scrollZoom: e.target.checked })}
-            className="w-4 h-4 rounded"
+            className="w-5 h-5 rounded"
             style={checkboxStyle}
           />
           <span className="text-sm" style={labelStyle}>Enable Scroll Zoom</span>
         </label>
 
-        <label className="flex items-center space-x-3 cursor-pointer">
+        <label className="flex items-center space-x-3 cursor-pointer py-1.5 -mx-2 px-2 rounded-lg transition-colors hover:bg-black/5 active:bg-black/10">
           <input
             type="checkbox"
             checked={graphSettings.editable}
             onChange={(e) => updateGraphSettings({ editable: e.target.checked })}
-            className="w-4 h-4 rounded"
+            className="w-5 h-5 rounded"
             style={checkboxStyle}
           />
           <span className="text-sm" style={labelStyle}>Editable Mode</span>
         </label>
 
-        <label className="flex items-center space-x-3 cursor-pointer">
+        <label className="flex items-center space-x-3 cursor-pointer py-1.5 -mx-2 px-2 rounded-lg transition-colors hover:bg-black/5 active:bg-black/10">
           <input
             type="checkbox"
             checked={graphSettings.exportEnabled}
             onChange={(e) => updateGraphSettings({ exportEnabled: e.target.checked })}
-            className="w-4 h-4 rounded"
+            className="w-5 h-5 rounded"
             style={checkboxStyle}
           />
           <span className="text-sm" style={labelStyle}>Show Export Button</span>

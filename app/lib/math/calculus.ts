@@ -4,6 +4,11 @@ import type {
   IntegralOptions,
 } from "@/types";
 
+import {
+  describeIntegralFailure,
+  integrateSymbolically,
+} from "./symbolicIntegration";
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type NerdamerInstance = any | undefined;
 /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -79,23 +84,29 @@ export const calculateIntegral = (
     const variant = options.variant ?? (options.bounds ? "definite" : "indefinite");
 
     if (variant === "indefinite" || !options.bounds) {
-      try {
-        const indefinite = nerdamerInstance.integrate(expression, variable);
-        const result = `${indefinite.toString()} + C`;
+      const symbolic = integrateSymbolically({
+        nerdamerInstance,
+        expression,
+        variable,
+      });
 
+      if (symbolic.ok && symbolic.result) {
         return {
           mode: "integral",
           input: expression,
-          result,
-        };
-      } catch (error) {
-        return {
-          mode: "integral",
-          input: expression,
-          result: "",
-          error: (error as Error).message,
+          result: `${symbolic.result} + C`,
+          steps: symbolic.steps,
         };
       }
+
+      return {
+        mode: "integral",
+        input: expression,
+        result: `Integral(${expression}) d${variable}`,
+        error:
+          symbolic.error ??
+          "Symbolic integral unavailable. Try supplying bounds for a numerical approximation.",
+      };
     }
 
     const [a, b] = options.bounds;
@@ -108,6 +119,12 @@ export const calculateIntegral = (
         error: "Bounds are required for definite integrals",
       };
     }
+
+    const symbolic = integrateSymbolically({
+      nerdamerInstance,
+      expression,
+      variable,
+    });
 
     try {
       const indefinite = nerdamerInstance.integrate(expression, variable);
@@ -123,8 +140,9 @@ export const calculateIntegral = (
         mode: "integral",
         input: expression,
         result,
+        steps: symbolic.ok ? symbolic.steps : undefined,
       };
-    } catch {
+    } catch (error) {
       const f = (x: number) => evaluateFn(expression, { [variable]: x });
       const result = simpsonRule(f, a, b, 1000);
 
@@ -132,6 +150,12 @@ export const calculateIntegral = (
         mode: "integral",
         input: expression,
         result,
+        error: (error as Error).message,
+        steps: [
+          symbolic.ok && symbolic.result
+            ? `Symbolic attempt failed; approximated numerically after trying ${symbolic.method}`
+            : describeIntegralFailure(expression, variable, options),
+        ].filter(Boolean) as string[],
       };
     }
   } catch (error) {

@@ -1,9 +1,5 @@
 'use client';
 
-/**
- * 3D Graph component using Plotly.js for interactive 3D visualization
- */
-
 import { useEffect, useMemo, useRef } from 'react';
 import type { Config, Data, Layout } from 'plotly.js-dist-min';
 import PlotlyChart, { type PlotlyChartHandle } from '@/components/PlotlyChart';
@@ -147,7 +143,7 @@ export default function Graph3D({ isActive = true }: Graph3DProps) {
   if (data.length === 0) {
     return (
       <div
-        className="w-full h-full flex items-center justify-center rounded-lg shadow-lg border"
+        className="w-full h-full flex items-center justify-center rounded-lg shadow-lg border touch-pan hw-accelerated animate-fade-in"
         style={containerStyle}
       >
         <p style={emptyTextStyle}>Add a 3D equation to visualize</p>
@@ -156,7 +152,7 @@ export default function Graph3D({ isActive = true }: Graph3DProps) {
   }
 
   return (
-    <div className="w-full h-full rounded-lg shadow-lg border" style={containerStyle}>
+    <div className="w-full h-full rounded-lg shadow-lg border touch-pan hw-accelerated" style={containerStyle}>
       <PlotlyChart
         ref={plotRef}
         data={data}

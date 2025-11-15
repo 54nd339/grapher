@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTheme } from "@/theme/ThemeProvider";
 import { themes, type ThemeName, type ResolvedThemeName } from "@/theme/presets";
 import { themeVar } from "@/theme/themeVars";
+import { useLocalStorage, useClickOutside } from "@/hooks";
 
 const STORAGE_KEY = "ui-theme";
 
@@ -18,37 +19,20 @@ export default function ThemeSwitcher() {
   const { themeName, resolvedTheme, setTheme } = useTheme();
   const themeList = useMemo(() => [...themes.names], []);
   const [open, setOpen] = useState(false);
-  const switcherRef = useRef<HTMLDivElement>(null);
+  const [storedTheme, setStoredTheme] = useLocalStorage<ThemeName>(STORAGE_KEY, "system");
+  const switcherRef = useClickOutside<HTMLDivElement>(() => setOpen(false));
 
-  const hydratedRef = useRef(false);
-
-  // hydrate from localStorage once on mount
+  // Hydrate theme from localStorage on mount
   useEffect(() => {
-    if (hydratedRef.current || typeof window === "undefined") return;
-    hydratedRef.current = true;
-    const stored = window.localStorage.getItem(STORAGE_KEY) as ThemeName | null;
-    if (stored && themeList.includes(stored)) {
-      setTheme(stored);
+    if (storedTheme && themeList.includes(storedTheme)) {
+      setTheme(storedTheme);
     }
-  }, [setTheme, themeList]);
+  }, [setTheme, storedTheme, themeList]);
 
-  // persist whenever theme changes
+  // Persist theme changes to localStorage
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(STORAGE_KEY, themeName);
-  }, [themeName]);
-
-  // close dropdown on outside click
-  useEffect(() => {
-    const handleClick = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!switcherRef.current?.contains(target)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+    setStoredTheme(themeName);
+  }, [themeName, setStoredTheme]);
 
   const selectTheme = (name: ThemeName) => {
     setTheme(name);

@@ -1,6 +1,6 @@
-import 'katex/dist/katex.min.css';
-import { InlineMath } from 'react-katex';
 import { LabeledInput } from './LabeledInput';
+import { LatexExpressionInput } from './LatexExpressionInput';
+import { expressionToEditableLatex } from '@/lib/latex';
 import type { CalculatorThemeStyles } from '@/types';
 
 export type DerivativeFormProps = {
@@ -23,24 +23,17 @@ export const DerivativeForm = ({
   themeStyles,
 }: DerivativeFormProps) => (
   <div className="space-y-3">
-    <div>
-      <label className="block text-sm font-medium mb-1" style={themeStyles.muted}>
-        Function f({variable})
-      </label>
-      <input
-        type="text"
-        value={input}
-        onChange={(e) => onInputChange(e.target.value)}
-        placeholder="e.g., x^2 + 2*x + 1"
-        className="w-full px-3 py-2 border rounded-lg font-mono"
-        style={themeStyles.input}
-      />
-      {input && (
-        <div className="mt-2 p-2 rounded border" style={themeStyles.preview}>
-          <InlineMath math={`f(${variable}) = ${input.replace(/\*/g, '').replace(/\^/g, '^')}`} />
-        </div>
-      )}
-    </div>
+    <LatexExpressionInput
+      label={`Function f(${variable})`}
+      expression={input}
+      onExpressionChange={onInputChange}
+      placeholder="e.g., x^2 + 2*x + 1"
+      previewLatex={
+        input ? `f(${variable}) = ${expressionToEditableLatex(input)}` : undefined
+      }
+      previewPlaceholder="Enter a function to preview f(x)"
+      themeStyles={themeStyles}
+    />
     <div className="grid grid-cols-2 gap-3">
       <LabeledInput
         label="Variable"

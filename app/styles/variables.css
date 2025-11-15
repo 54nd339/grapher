@@ -1,0 +1,12 @@
+/* Base theme variables and color scheme */
+:root {
+  color-scheme: light;
+  --background: var(--theme-background, #ffffff);
+  --foreground: var(--theme-text, #171717);
+  --accent-1: var(--theme-gradientPrimaryStart, #667eea);
+  --accent-2: var(--theme-gradientPrimaryEnd, #764ba2);
+}
+
+:root[data-color-scheme='dark'] {
+  color-scheme: dark;
+}

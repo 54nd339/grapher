@@ -1,0 +1,35 @@
+/* Mobile-optimized touch utilities */
+.touch-scroll-snap {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.touch-scroll-snap > * {
+  scroll-snap-align: start;
+}
+
+.touch-pan {
+  touch-action: pan-x pan-y;
+  -ms-touch-action: pan-x pan-y;
+}
+
+.gpu-layer {
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+/* Mobile-optimized animations */
+@media (max-width: 1024px) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  button, a, .interactive {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  input, textarea, select {
+    font-size: 16px; /* Prevents iOS zoom */
+  }
+}

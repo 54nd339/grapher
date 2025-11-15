@@ -1,0 +1,50 @@
+/* Base body and element styles */
+body {
+  background: var(--theme-background, #ffffff);
+  color: var(--theme-text, #171717);
+  transition: background-color 0.25s ease, color 0.25s ease;
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+body,
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+  color: var(--theme-text, #171717);
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  touch-action: manipulation;
+}
+
+input,
+textarea,
+select {
+  background: var(--theme-surface, #ffffff);
+  border: 1px solid var(--theme-border, #e2e8f0);
+  color: var(--theme-text, #171717);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--theme-gradientPrimaryStart, #667eea), var(--theme-gradientPrimaryEnd, #764ba2));
+  color: var(--theme-textOnAccent, #ffffff);
+  border: none;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--theme-primary, #667eea) 25%, transparent);
+  touch-action: manipulation;
+}
+.btn-primary:hover {
+  filter: brightness(1.05);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--theme-primary, #667eea) 35%, transparent);
+}
+.btn-primary:active {
+  filter: brightness(0.95);
+}

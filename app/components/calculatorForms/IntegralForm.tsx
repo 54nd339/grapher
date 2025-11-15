@@ -1,6 +1,6 @@
-import 'katex/dist/katex.min.css';
-import { BlockMath } from 'react-katex';
 import { LabeledInput } from './LabeledInput';
+import { LatexExpressionInput } from './LatexExpressionInput';
+import { expressionToEditableLatex } from '@/lib/latex';
 import type { CalculatorThemeStyles, IntegralVariant } from '@/types';
 
 export type IntegralFormProps = {
@@ -30,12 +30,11 @@ export const IntegralForm = ({
   onVariantChange,
   themeStyles,
 }: IntegralFormProps) => {
-  const previewMath =
-    variant === 'definite'
-      ? `\\int_{${lowerBound}}^{${upperBound}} ${input
-          .replace(/\*/g, '')
-          .replace(/\^/g, '^')} \\, d${variable}`
-      : `\\int ${input.replace(/\*/g, '').replace(/\^/g, '^')} \\, d${variable}`;
+  const previewMath = input
+    ? variant === 'definite'
+      ? `\\int_{${lowerBound || 'a'}}^{${upperBound || 'b'}} ${expressionToEditableLatex(input)} \\, d${variable}`
+      : `\\int ${expressionToEditableLatex(input)} \\, d${variable}`
+    : undefined;
 
   const typeOptions: { label: string; value: IntegralVariant }[] = [
     { label: 'Definite', value: 'definite' },
@@ -64,24 +63,15 @@ export const IntegralForm = ({
         ))}
       </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-1" style={themeStyles.muted}>
-          Function f({variable})
-        </label>
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => onInputChange(e.target.value)}
-          placeholder="e.g., x^2"
-          className="w-full px-3 py-2 border rounded-lg font-mono"
-          style={themeStyles.input}
-        />
-        {input && (
-          <div className="mt-2 p-2 rounded border" style={themeStyles.preview}>
-            <BlockMath math={previewMath} />
-          </div>
-        )}
-      </div>
+      <LatexExpressionInput
+        label={`Function f(${variable})`}
+        expression={input}
+        onExpressionChange={onInputChange}
+        placeholder="e.g., x^2"
+        previewLatex={previewMath}
+        previewPlaceholder="Enter an integrand to preview"
+        themeStyles={themeStyles}
+      />
       <div className={`grid gap-3 ${variant === 'definite' ? 'grid-cols-3' : 'grid-cols-1'}`}>
         <LabeledInput
           label="Variable"

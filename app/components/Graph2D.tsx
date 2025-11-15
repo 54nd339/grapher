@@ -242,7 +242,7 @@ export default function Graph2D({ isActive = true }: Graph2DProps) {
 
   return (
     <div
-      className="w-full h-full rounded-xl shadow-2xl p-4 border overflow-hidden custom-scrollbar relative"
+      className="w-full h-full rounded-xl shadow-2xl p-4 border overflow-hidden custom-scrollbar relative touch-pan hw-accelerated"
       style={graph2DStyles.container}
     >
       <PlotlyChart
@@ -255,7 +255,7 @@ export default function Graph2D({ isActive = true }: Graph2DProps) {
       />
 
       {visibleEquations.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none animate-fade-in">
           <p className="text-lg" style={graph2DStyles.emptyState}>
             Add an equation to start graphing
           </p>

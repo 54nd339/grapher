@@ -1,4 +1,6 @@
 import { LabeledInput } from './LabeledInput';
+import { LatexExpressionInput } from './LatexExpressionInput';
+import { expressionToEditableLatex } from '@/lib/latex';
 import type { CalculatorThemeStyles } from '@/types';
 
 export type SolveFormProps = {
@@ -17,12 +19,13 @@ export const SolveForm = ({
   themeStyles,
 }: SolveFormProps) => (
   <div className="space-y-3">
-    <LabeledInput
+    <LatexExpressionInput
       label="Equation"
-      value={input}
-      onChange={onInputChange}
+      expression={input}
+      onExpressionChange={onInputChange}
       placeholder="e.g., x^2 - 4 = 0"
-      inputClassName="font-mono"
+      previewLatex={input ? expressionToEditableLatex(input) : undefined}
+      previewPlaceholder="Enter an equation to preview"
       themeStyles={themeStyles}
     />
     <LabeledInput

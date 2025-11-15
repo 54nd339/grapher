@@ -1,8 +1,4 @@
 /**
- * Utility functions for color generation, formatting, and validation
- */
-
-/**
  * Generate a random color for equations
  */
 export const generateRandomColor = (): string => {

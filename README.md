@@ -5,7 +5,7 @@ A comprehensive Desmos-like graphing calculator built with Next.js, featuring 2D
 ## 🚀 Features
 
 ### 📊 Graphing Capabilities
-- **2D Graphing**: Plot explicit and implicit functions with real-time rendering using Mafs
+- **2D Graphing**: Plot explicit and implicit functions with real-time rendering using Plotly.js
 - **3D Graphing**: Interactive 3D surface plots with Plotly.js
 - **Parametric Equations**: Support for parametric curve plotting
 - **Polar Coordinates**: Visualize polar equations
@@ -26,7 +26,7 @@ A comprehensive Desmos-like graphing calculator built with Next.js, featuring 2D
 - Real-time graph rendering with expression caching
 - Multi-equation support with color coding
 - Customizable graph settings (ranges, grid)
-- Dark mode support
+- Rich theming system with system/solarized/neon palettes and auto OS detection
 - Responsive design for all devices
 - Optimized computation using nerdamer
 - Adaptive grid spacing based on zoom level
@@ -42,17 +42,21 @@ A comprehensive Desmos-like graphing calculator built with Next.js, featuring 2D
 
 ### Mathematical Libraries
 - **nerdamer** - Symbolic mathematics engine
-- **Mafs 0.21.0** - High-performance 2D graphing
-- **Plotly.js** - Interactive 3D visualizations
+- **Plotly.js** - Interactive 2D & 3D visualizations
 - **react-katex** - LaTeX equation rendering
 
 ### State Management
 - **Zustand** - Lightweight state management
 
-### 3D Rendering
-- **Three.js** - 3D graphics library
-- **@react-three/fiber** - React renderer for Three.js
-- **@react-three/drei** - Useful helpers for react-three-fiber
+## 🎨 Theme System
+
+The UI uses a centralized theme registry located under `app/theme/presets`.
+
+- Built-in palettes: Nebula Dark, Halo Light, Solarized Dark/Light, Neon Pulse, Midnight Aero, Forest Glade, Sunset Fader, Aurora Wave, Pastel Haze, plus a `system` option that mirrors the OS preference.
+- `ThemeProvider` listens to `prefers-color-scheme` and swaps tokens automatically, so buttons/inputs/text adjust instantly when the OS theme changes.
+- Equation colors are sourced from each theme's `equationPalette`, ensuring plotted traces always contrast against the current background.
+- To add a theme, append a new object to `themeOptions`; every component reads variables via CSS custom properties so no component changes are required.
+- Global CSS lives in `app/globals.css`, which seeds Tailwind, exposes CSS custom property fallbacks, and defines both the default modern scrollbar plus a `.custom-scrollbar` helper for opt-in containers.
 
 ## 📁 Project Structure
 
@@ -60,7 +64,7 @@ A comprehensive Desmos-like graphing calculator built with Next.js, featuring 2D
 grapher/
 ├── app/
 │   ├── components/          # React components
-│   │   ├── Graph2D.tsx      # 2D graph renderer (Mafs)
+│   │   ├── Graph2D.tsx      # 2D graph renderer (Plotly)
 │   │   ├── Graph3D.tsx      # 3D graph renderer (Plotly)
 │   │   ├── EquationInput.tsx # Equation input panel
 │   │   ├── Calculator.tsx   # Advanced calculator
@@ -71,8 +75,8 @@ grapher/
 │   │   └── utils.ts         # Utility functions
 │   ├── types/               # TypeScript definitions
 │   │   └── index.ts         # Type definitions
-│   ├── styles/              # Additional styles
-│   ├── globals.css          # Global styles
+│   ├── theme/               # Centralized theming system
+│   ├── globals.css          # Tailwind + theme variables + scrollbar styles
 │   ├── layout.tsx           # Root layout
 │   └── page.tsx             # Main page
 ├── public/                  # Static assets
@@ -276,7 +280,7 @@ Contributions are welcome! Please follow these guidelines:
 - [ ] Export graphs as images/SVG
 - [ ] Share equations via URL
 - [ ] Touch/gesture controls for mobile
-- [ ] More color schemes and themes
+- [ ] In-app theme editor/preset sharing
 - [ ] Equation library/presets
 - [ ] LaTeX input support
 - [ ] Statistical analysis tools
@@ -287,8 +291,7 @@ This project is open source and available under the MIT License.
 
 ## 🙏 Acknowledgments
 
-- [mathjs](https://mathjs.org/) - Extensive mathematics library
-- [Mafs](https://mafs.dev/) - Beautiful math visualizations
+- [Nerdamer](https://github.com/jiggzson/nerdamer) - Symbolic mathematics engine
 - [Plotly.js](https://plotly.com/javascript/) - Interactive graphing
 - [Desmos](https://www.desmos.com/) - Inspiration for UI/UX
 - [emathhelp.net](https://www.emathhelp.net/) - Calculation features inspiration

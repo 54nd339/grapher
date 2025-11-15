@@ -1,27 +1,49 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  /* Accent defaults (indigo) */
-  --accent-1: #667eea; /* start */
-  --accent-2: #764ba2; /* end */
+  color-scheme: light;
+  --background: var(--theme-background, #ffffff);
+  --foreground: var(--theme-text, #171717);
+  --accent-1: var(--theme-gradientPrimaryStart, #667eea);
+  --accent-2: var(--theme-gradientPrimaryEnd, #764ba2);
+}
+
+:root[data-color-scheme='dark'] {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--theme-background, #ffffff);
+  color: var(--theme-text, #171717);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+body,
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+  color: var(--theme-text, #171717);
+}
+
+input,
+textarea,
+select {
+  background: var(--theme-surface, #ffffff);
+  border: 1px solid var(--theme-border, #e2e8f0);
+  color: var(--theme-text, #171717);
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
-  color: #fff;
+  background: linear-gradient(135deg, var(--theme-gradientPrimaryStart, #667eea), var(--theme-gradientPrimaryEnd, #764ba2));
+  color: var(--theme-textOnAccent, #ffffff);
   border: none;
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-1) 25%, transparent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--theme-primary, #667eea) 25%, transparent);
 }
 .btn-primary:hover {
   filter: brightness(1.05);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent-1) 35%, transparent);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--theme-primary, #667eea) 35%, transparent);
 }
 .btn-primary:active {
   filter: brightness(0.95);
@@ -30,7 +52,8 @@ body {
 /* Modern scrollbar styling for the entire app */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #667eea rgba(0, 0, 0, 0.05);
+  scrollbar-color: var(--theme-scrollbarThumb, #667eea)
+    var(--theme-scrollbarTrack, rgba(0, 0, 0, 0.05));
 }
 
 *::-webkit-scrollbar {
@@ -39,12 +62,16 @@ body {
 }
 
 *::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--theme-scrollbarTrack, rgba(0, 0, 0, 0.05));
   border-radius: 10px;
 }
 
 *::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, var(--accent-1) 0%, var(--accent-2) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--theme-gradientPrimaryStart, #667eea) 0%,
+    var(--theme-gradientPrimaryEnd, #764ba2) 100%
+  );
   border-radius: 10px;
   border: 2px solid transparent;
   background-clip: padding-box;
@@ -52,7 +79,110 @@ body {
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, var(--accent-1) 0%, var(--accent-2) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--theme-gradientHoverStart, var(--theme-gradientPrimaryStart, #667eea)) 0%,
+    var(--theme-gradientHoverEnd, var(--theme-gradientPrimaryEnd, #764ba2)) 100%
+  );
   background-clip: padding-box;
-  box-shadow: 0 0 6px color-mix(in srgb, var(--accent-1) 50%, transparent);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--theme-primaryGlow, rgba(99, 102, 241, 0.4)) 100%, transparent);
+}
+
+/* Scoped scrollbar styling for containers that opt in via .custom-scrollbar */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--theme-scrollbarThumb, #667eea)
+    var(--theme-scrollbarTrack, rgba(0, 0, 0, 0.05));
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    135deg,
+    var(--theme-gradientPrimaryStart, #667eea) 0%,
+    var(--theme-gradientPrimaryEnd, #764ba2) 100%
+  );
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    135deg,
+    var(--theme-gradientHoverStart, var(--theme-gradientPrimaryStart, #5568d3)) 0%,
+    var(--theme-gradientHoverEnd, var(--theme-gradientPrimaryEnd, #653a8b)) 100%
+  );
+  box-shadow: 0 0 6px var(--theme-scrollbarGlow, rgba(102, 126, 234, 0.5));
+}
+
+@layer components {
+  .glow-button {
+    transition: box-shadow 0.25s ease, transform 0.2s ease, filter 0.2s ease;
+    box-shadow: 0 0 0 0 var(--theme-primaryGlow, rgba(99, 102, 241, 0.25));
+  }
+
+  .glow-button[data-active='true']:hover {
+    box-shadow: 0 0 20px 4px var(--theme-primaryGlow, rgba(99, 102, 241, 0.45)) !important;
+    transform: translateY(-1px);
+  }
+
+  .glow-button[data-active='false']:hover {
+    box-shadow: 0 0 14px 2px var(--theme-primaryGlow, rgba(99, 102, 241, 0.35)) !important;
+    transform: translateY(-0.5px);
+  }
+
+  .glow-button[data-active='true']:active {
+    box-shadow: 0 0 16px 2px var(--theme-primaryGlow, rgba(99, 102, 241, 0.3)) !important;
+    transform: translateY(0);
+    filter: brightness(0.98);
+  }
+
+  .glow-button:focus-visible {
+    outline: 2px solid var(--theme-primary, #6366f1);
+    outline-offset: 2px;
+  }
+
+  .tab-button {
+    position: relative;
+    transition: color 0.2s ease, box-shadow 0.25s ease, transform 0.2s ease, filter 0.2s ease;
+    isolation: isolate;
+    overflow: hidden;
+  }
+
+  .tab-button::after {
+    content: "";
+    position: absolute;
+    inset: -40%;
+    background: radial-gradient(circle at center, var(--theme-primaryGlow, rgba(99, 102, 241, 0.4)), transparent 65%);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    z-index: -1;
+  }
+
+  .tab-button[data-active='true'] {
+    box-shadow: 0 10px 24px -12px var(--theme-primaryGlow, rgba(99, 102, 241, 0.55));
+    filter: brightness(1.02);
+  }
+
+  .tab-button[data-active='true']::after {
+    opacity: 0.6;
+  }
+
+  .tab-button[data-active='true']:hover {
+    box-shadow: 0 12px 28px -8px var(--theme-primaryGlow, rgba(99, 102, 241, 0.75));
+    transform: scale(1.015);
+  }
+
+  .tab-button:not([data-active='true']):hover {
+    filter: brightness(1.05);
+  }
 }

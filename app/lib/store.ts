@@ -1,10 +1,5 @@
-/**
- * Global state management using Zustand
- * Manages equations, graph settings, and calculation results
- */
-
 import { create } from 'zustand';
-import type { Equation, GraphSettings, CalculationResult, GraphMode, CalculationMode } from '../types';
+import type { Equation, GraphSettings, CalculationResult, GraphMode, CalculationMode } from '@/types';
 
 interface AppStore {
   // Equations state
@@ -45,6 +40,12 @@ const defaultGraphSettings: GraphSettings = {
   backgroundColor: '#ffffff',
   gridColor: '#e5e7eb',
   axesColor: '#000000',
+  scrollZoom: true,
+  editable: false,
+  exportEnabled: true,
+  exportFormat: 'png',
+  animationEnabled: true,
+  animationDuration: 400,
 };
 
 const generateId = () => `eq-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;

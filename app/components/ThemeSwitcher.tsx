@@ -1,110 +1,167 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useTheme } from "@/theme/ThemeProvider";
+import { themes, type ThemeName, type ResolvedThemeName } from "@/theme/presets";
+import { themeVar } from "@/theme/themeVars";
 
-type Theme = 'light' | 'dark' | 'system';
-type ColorScheme = 'indigo' | 'violet' | 'emerald' | 'rose' | 'amber' | 'cyan';
+const STORAGE_KEY = "ui-theme";
 
-const colorSchemes: ColorScheme[] = ['indigo', 'violet', 'emerald', 'rose', 'amber', 'cyan'];
+const getPreviewTokens = (name: ThemeName, resolvedTheme: ResolvedThemeName) => {
+  if (name === "system") {
+    return themes.tokens[resolvedTheme];
+  }
+  return themes.tokens[name as ResolvedThemeName];
+};
 
 export default function ThemeSwitcher() {
+  const { themeName, resolvedTheme, setTheme } = useTheme();
+  const themeList = useMemo(() => [...themes.names], []);
   const [open, setOpen] = useState(false);
-  const [theme, setTheme] = useState<Theme>(() => (typeof window !== 'undefined' ? ((localStorage.getItem('ui-theme') as Theme) || 'system') : 'system'));
-  const [scheme, setScheme] = useState<ColorScheme>(() => (typeof window !== 'undefined' ? ((localStorage.getItem('ui-color-scheme') as ColorScheme) || 'indigo') : 'indigo'));
+  const switcherRef = useRef<HTMLDivElement>(null);
 
-  const applyTheme = (t: Theme, s: ColorScheme) => {
-    const root = document.documentElement;
-    // theme
-    const effectiveDark = t === 'dark' || (t === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    root.dataset.theme = effectiveDark ? 'dark' : 'light';
-    // Ensure Tailwind dark: variants apply
-    if (effectiveDark) {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
+  const hydratedRef = useRef(false);
+
+  // hydrate from localStorage once on mount
+  useEffect(() => {
+    if (hydratedRef.current || typeof window === "undefined") return;
+    hydratedRef.current = true;
+    const stored = window.localStorage.getItem(STORAGE_KEY) as ThemeName | null;
+    if (stored && themeList.includes(stored)) {
+      setTheme(stored);
     }
-    // color scheme
-    root.dataset.colorScheme = s;
-  };
+  }, [setTheme, themeList]);
 
+  // persist whenever theme changes
   useEffect(() => {
-    applyTheme(theme, scheme);
-  }, [theme, scheme]);
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(STORAGE_KEY, themeName);
+  }, [themeName]);
 
-  const updateTheme = (t: Theme) => {
-    setTheme(t);
-    localStorage.setItem('ui-theme', t);
-    applyTheme(t, scheme);
-  };
-
-  const updateScheme = (s: ColorScheme) => {
-    setScheme(s);
-    localStorage.setItem('ui-color-scheme', s);
-    applyTheme(theme, s);
-  };
-
-  // Close popover on outside click
+  // close dropdown on outside click
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('#theme-switcher')) setOpen(false);
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!switcherRef.current?.contains(target)) {
+        setOpen(false);
+      }
     };
-    document.addEventListener('click', handler);
-    return () => document.removeEventListener('click', handler);
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  const selectTheme = (name: ThemeName) => {
+    setTheme(name);
+    setOpen(false);
+  };
+
+  const dropdownStyle = {
+    background: themeVar("surface"),
+    borderColor: themeVar("border"),
+    boxShadow: "0 18px 45px rgba(0,0,0,0.18)",
+  } as const;
+
+  const buttonStyle = {
+    background: themeVar("surface"),
+    borderColor: themeVar("border"),
+    color: themeVar("text"),
+  } as const;
+
   return (
-    <div id="theme-switcher" className="relative">
+    <div ref={switcherRef} className="relative" aria-expanded={open}>
       <button
-        onClick={() => setOpen((v) => !v)}
-        title="Theme & colors"
-        aria-label="Theme and color settings"
-        className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow hover:bg-gray-50 dark:hover:bg-gray-700"
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-label="Theme settings"
+        className="w-10 h-10 rounded-full border flex items-center justify-center transition-all glow-button"
+        style={buttonStyle}
+        data-active="true"
       >
-        {/* palette icon */}
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-gray-700 dark:text-gray-300">
-          <path d="M12 2C6.477 2 2 6.03 2 10.75 2 13.65 3.77 16.2 6.5 17.8c.41.24.66.69.62 1.16-.06.73.2 1.49.82 2.11.92.92 2.41 1.07 3.5.36 1.02-.66 1.57-1.7 1.57-2.73 0-.88.72-1.6 1.6-1.6h.84C18.85 17.1 22 14.2 22 10.75 22 6.03 17.523 2 12 2Zm-4 7.25a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5Zm4-1.5a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5Zm4 1.5a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5Zm-2 3.5a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5Z" />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          className="w-5 h-5"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M7.5 3.75A8.25 8.25 0 1 0 19.5 15a2.25 2.25 0 0 0-2.25-2.25H15a1.5 1.5 0 0 1-1.5-1.5V9A5.25 5.25 0 0 0 8.25 3.75h-.75Z"
+          />
+          <circle cx="9" cy="8.25" r=".75" />
+          <circle cx="12" cy="6.75" r=".75" />
+          <circle cx="15" cy="8.25" r=".75" />
+          <circle cx="13.5" cy="11.25" r=".75" />
         </svg>
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-64 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg p-3 z-50">
-          <div className="px-1 py-2">
-            <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Theme</div>
-            <div className="flex gap-2">
-              {(['light','dark','system'] as Theme[]).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => updateTheme(t)}
-                  className={`flex-1 px-3 py-2 rounded-lg text-sm border transition-colors ${
-                    theme === t
-                      ? 'border-gray-800 dark:border-gray-200 text-gray-900 dark:text-white'
-                      : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {t[0].toUpperCase() + t.slice(1)}
-                </button>
-              ))}
-            </div>
+        <div
+          className="absolute right-0 mt-2 w-56 rounded-2xl border p-3 z-50"
+          style={dropdownStyle}
+          role="menu"
+        >
+          <div className="text-xs uppercase tracking-wider mb-2" style={{ color: themeVar("textMuted") }}>
+            Theme
           </div>
-
-          <div className="px-1 py-2">
-            <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Color scheme</div>
-            <div className="grid grid-cols-6 gap-2">
-              {colorSchemes.map((c) => (
+          <div className="flex flex-col gap-2">
+            {themeList.map((name) => {
+              const active = name === themeName;
+              const tokens = getPreviewTokens(name as ThemeName, resolvedTheme);
+              const palette = Array.isArray(tokens?.equationPalette)
+                ? tokens.equationPalette.slice(0, 4)
+                : undefined;
+              return (
                 <button
-                  key={c}
-                  onClick={() => updateScheme(c)}
-                  title={c}
-                  aria-label={c}
-                  className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-105 ${scheme === c ? 'ring-2 ring-offset-2 ring-gray-400 dark:ring-gray-600' : ''}`}
+                  key={name}
+                  type="button"
+                  className="flex items-center justify-between px-3 py-2 rounded-xl border text-sm transition-all glow-button"
                   style={{
-                    borderColor: 'transparent',
-                    background: `linear-gradient(135deg, var(--${c}-1, var(--accent-1)), var(--${c}-2, var(--accent-2)))`,
+                    borderColor: active ? themeVar("primary") : themeVar("border"),
+                    background: active ? themeVar("surfaceAlt") : themeVar("surface"),
+                    color: themeVar("text"),
                   }}
-                />
-              ))}
-            </div>
+                  data-active={active}
+                  onClick={() => selectTheme(name as ThemeName)}
+                  role="menuitemradio"
+                  aria-checked={active}
+                >
+                  <div className="flex flex-col text-left">
+                    <span className="font-medium">
+                      {themes.displayNames[name as ThemeName] ?? name}
+                    </span>
+                    {name === "system" && (
+                      <span className="text-xs" style={{ color: themeVar("textMuted") }}>
+                        Following {themes.displayNames[resolvedTheme]}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {palette?.map((color, index) => (
+                      <span
+                        key={`${name}-swatch-${index}`}
+                        className="block w-3 h-3 rounded-full"
+                        style={{ background: color }}
+                      />
+                    ))}
+                    {active && (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className="w-4 h-4"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m5 12 4 4 10-10" />
+                      </svg>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

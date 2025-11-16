@@ -1,19 +1,22 @@
 import { useEffect, useRef } from 'react';
+import type { RefObject } from 'react';
 import { useAppStore } from '@/lib/store';
 import { mathEngine } from '@/lib/mathEngine';
 import type { PlotlyChartHandle } from '@/components/PlotlyChart';
 
-// Easing functions
+/**
+ * Easing functions for animation transitions
+ */
 const easingFns: Record<string, (t: number) => number> = {
   linear: (t) => t,
-  easeInOut: (t) => t < 0.5 ? 2*t*t : -1 + (4 - 2*t)*t,
-  quadIn: (t) => t*t,
-  quadOut: (t) => t*(2 - t),
-  cubicInOut: (t) => t < 0.5 ? 4*t*t*t : (t-1)*(2*t-2)*(2*t-2)+1,
+  easeInOut: (t) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t,
+  quadIn: (t) => t * t,
+  quadOut: (t) => t * (2 - t),
+  cubicInOut: (t) => t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1,
 };
 
 interface UseParametricAnimationOptions {
-  plotHandleRef: React.RefObject<PlotlyChartHandle | null>;
+  plotHandleRef: RefObject<PlotlyChartHandle | null>;
   isActive: boolean;
 }
 

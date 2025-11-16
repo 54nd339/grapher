@@ -10,10 +10,6 @@ interface AppStore {
   toggleEquationVisibility: (id: string) => void;
   clearEquations: () => void;
 
-  // Animated selection
-  selectedAnimatedEquationId: string | null;
-  setSelectedAnimatedEquation: (id: string | null) => void;
-
   // Graph settings
   graphSettings: GraphSettings;
   updateGraphSettings: (settings: Partial<GraphSettings>) => void;
@@ -52,7 +48,12 @@ const defaultGraphSettings: GraphSettings = {
   animationDuration: 400,
 };
 
-const generateId = () => `eq-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+/**
+ * Generate a unique ID for equations
+ * Uses timestamp and random string for uniqueness
+ */
+const generateId = (): string => 
+  `eq-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
 export const useAppStore = create<AppStore>((set) => ({
   // Initial state
@@ -61,7 +62,6 @@ export const useAppStore = create<AppStore>((set) => ({
   selectedMode: '2d',
   calculationMode: null,
   results: [],
-  selectedAnimatedEquationId: null,
 
   // Equation actions
   addEquation: (equation) =>
@@ -115,7 +115,4 @@ export const useAppStore = create<AppStore>((set) => ({
     })),
 
   clearResults: () => set({ results: [] }),
-
-  // Animated equation selection
-  setSelectedAnimatedEquation: (id) => set({ selectedAnimatedEquationId: id }),
 }));

@@ -18,10 +18,13 @@ export const generateRandomColor = (): string => {
 };
 
 /**
- * Format a number for display
+ * Format a number for display with appropriate precision
+ * @param num - Number to format
+ * @param precision - Decimal precision (default: 4)
+ * @returns Formatted number string
  */
 export const formatNumber = (num: number, precision: number = 4): string => {
-  if (!isFinite(num)) return 'undefined';
+  if (!Number.isFinite(num)) return 'undefined';
   if (Math.abs(num) < 1e-10) return '0';
   if (Math.abs(num) > 1e6 || Math.abs(num) < 1e-3) {
     return num.toExponential(precision);
@@ -109,8 +112,11 @@ export const parseVector = (input: string): number[] => {
 
 /**
  * Download data as file
+ * @param data - The data to download
+ * @param filename - The filename for the download
+ * @param type - The MIME type (default: 'text/plain')
  */
-export const downloadAsFile = (data: string, filename: string, type: string = 'text/plain') => {
+export const downloadAsFile = (data: string, filename: string, type: string = 'text/plain'): void => {
   const blob = new Blob([data], { type });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -123,20 +129,25 @@ export const downloadAsFile = (data: string, filename: string, type: string = 't
 };
 
 /**
- * Export equations to JSON
+ * Export equations to JSON format
+ * @param equations - Array of equations to export
+ * @returns JSON string representation
  */
 export const exportEquations = (equations: unknown[]): string => {
   return JSON.stringify(equations, null, 2);
 };
 
 /**
- * Debounce function
+ * Debounce function to limit function execution frequency
+ * @param func - Function to debounce
+ * @param wait - Wait time in milliseconds
+ * @returns Debounced function
  */
 export const debounce = <T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): ((...args: Parameters<T>) => void) => {
-  let timeout: NodeJS.Timeout | null = null;
+  let timeout: ReturnType<typeof setTimeout> | null = null;
   return (...args: Parameters<T>) => {
     if (timeout) clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
@@ -144,7 +155,10 @@ export const debounce = <T extends (...args: unknown[]) => unknown>(
 };
 
 /**
- * Throttle function
+ * Throttle function to limit function execution rate
+ * @param func - Function to throttle
+ * @param limit - Time limit in milliseconds
+ * @returns Throttled function
  */
 export const throttle = <T extends (...args: unknown[]) => unknown>(
   func: T,

@@ -1,3 +1,8 @@
+/**
+ * Math module barrel exports
+ * Centralized exports for all mathematical operations
+ */
+
 export { calculateDerivative, calculateIntegral } from "./calculus";
 export { generate2DPoints, generate3DPoints } from "./graphing";
 export { performMatrixOperation } from "./matrix";

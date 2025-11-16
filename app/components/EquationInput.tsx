@@ -7,14 +7,24 @@ import { useAppStore } from '@/lib/store';
 import { useLatexInput } from '@/hooks';
 import { generateRandomColor, validateExpression } from '@/lib/utils';
 import { equationInputStyles } from '@/theme/styles';
+import { useTheme } from '@/theme/ThemeProvider';
 import type { GraphMode } from '@/types';
-import { expressionToEditableLatex } from '@/lib/latex';
+import { expressionToEditableLatex, normalizeHighLevelExpression } from '@/lib/latex';
+import { getNerdamer } from '@/lib/math/nerdamerClient';
+import MathKeyboard from '@/components/MathKeyboard';
+import EquationTemplateLibrary from '@/components/EquationTemplateLibrary';
+import CustomTemplateForm from '@/components/CustomTemplateForm';
+import type { EquationTemplate } from '@/types/equationTemplates';
 
 export default function EquationInput() {
-  const { equations, addEquation, removeEquation, toggleEquationVisibility, selectedMode } = useAppStore();
+  const { equations, addEquation, removeEquation, toggleEquationVisibility, selectedMode, setSelectedMode } = useAppStore();
   const [input, setInput] = useState('');
   const [error, setError] = useState('');
   const [inputMode, setInputMode] = useState<'expression' | 'latex'>('expression');
+  const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
+  const [showCustomTemplateForm, setShowCustomTemplateForm] = useState(false);
+  const [showHistory, setShowHistory] = useState(true);
+  const [selectedColor, setSelectedColor] = useState<string>('');
   
   const {
     latexInput,
@@ -27,6 +37,7 @@ export default function EquationInput() {
   } = useLatexInput();
 
   const themeStyles = equationInputStyles;
+  const { theme } = useTheme();
 
   const switchInputMode = (mode: 'expression' | 'latex') => {
     setInputMode(mode);
@@ -55,18 +66,38 @@ export default function EquationInput() {
       }
     }
 
-    const validation = validateExpression(input);
+    // Allow standard input to use high-level forms like d/dx x^2, int_0^1 x^2 dx, etc.
+    const normalizedStandard = normalizeHighLevelExpression(input);
+
+    const validation = validateExpression(normalizedStandard);
     if (!validation.valid) {
       setError(validation.error || 'Invalid expression');
       return;
     }
 
+    // Normalize with nerdamer before storing, when available
+    const nerdamer = getNerdamer();
+    let normalized = normalizedStandard.trim();
+    try {
+      if (nerdamer && normalized) {
+        const expr = nerdamer(normalized);
+        if (expr) {
+          normalized = expr.toString();
+        }
+      }
+    } catch {
+      console.warn('Nerdamer failed to parse expression, using raw input');
+    }
+
     addEquation({
-      expression: input,
-      color: generateRandomColor(),
+      expression: normalized,
+      color: selectedColor || generateRandomColor(),
       visible: true,
       mode: selectedMode,
     });
+    
+    // Reset color after adding
+    setSelectedColor('');
 
     setInput('');
     setError('');
@@ -98,6 +129,26 @@ export default function EquationInput() {
       setInput(example);
       setError('');
     }
+  };
+
+  const handleTemplateSelect = (template: EquationTemplate, substitutedExpression: string) => {
+    // Switch to the template's mode if different
+    if (template.mode !== selectedMode) {
+      setSelectedMode(template.mode);
+    }
+
+    // Set the expression
+    if (inputMode === 'latex') {
+      handleLatexInput(template.latex);
+    } else {
+      setInput(substitutedExpression);
+      setError('');
+    }
+  };
+
+  const handleCustomTemplateSave = (template: EquationTemplate) => {
+    setShowCustomTemplateForm(false);
+    handleTemplateSelect(template, template.expression);
   };
 
   return (
@@ -202,40 +253,143 @@ export default function EquationInput() {
           </div>
         )}
 
-        <div className="flex gap-2">
+        <div className="space-y-2">
           <button
             type="submit"
-            className="flex-1 px-4 py-3 rounded-lg font-medium transition-all glow-button touch-feedback hw-accelerated active:scale-98"
+            className="w-full px-4 py-3 rounded-lg font-medium transition-all glow-button touch-feedback hw-accelerated active:scale-98"
             style={themeStyles.addButton}
             data-active="true"
           >
             Add Equation
           </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setShowTemplateLibrary(true)}
+              className="flex-1 px-4 py-3 rounded-lg font-medium transition-all glow-button touch-feedback hw-accelerated active:scale-98"
+              style={{
+                background: `linear-gradient(135deg, var(--theme-gradientPrimaryStart), var(--theme-gradientPrimaryEnd))`,
+                color: `var(--theme-textOnAccent)`,
+                border: 'none',
+              }}
+              data-active="true"
+              title="Browse equation templates"
+            >
+              📚 Templates
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCustomTemplateForm(true)}
+              className="flex-1 px-4 py-3 rounded-lg font-medium transition-all glow-button touch-feedback hw-accelerated active:scale-98"
+              style={{
+                background: `linear-gradient(135deg, var(--theme-gradientHoverStart, var(--theme-gradientPrimaryStart)), var(--theme-gradientHoverEnd, var(--theme-gradientPrimaryEnd)))`,
+                color: `var(--theme-textOnAccent)`,
+                border: 'none',
+              }}
+              data-active="true"
+              title="Create custom template"
+            >
+              ➕ Custom
+            </button>
+          </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <span className="text-sm" style={themeStyles.helper}>Examples:</span>
-          {examples.map((example, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => applyExample(example)}
-              className="text-xs px-3 py-1.5 rounded-lg border transition-all hover:opacity-80 touch-feedback active:scale-95 hw-accelerated"
-              style={themeStyles.exampleChip}
-            >
-              {example}
-            </button>
-          ))}
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-2">
+            <span className="text-sm" style={themeStyles.helper}>Examples:</span>
+            {examples.map((example, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => applyExample(example)}
+                className="text-xs px-3 py-1.5 rounded-lg border transition-all hover:opacity-80 touch-feedback active:scale-95 hw-accelerated"
+                style={themeStyles.exampleChip}
+              >
+                {example}
+              </button>
+            ))}
+          </div>
+          
+          {/* Color Picker */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm" style={themeStyles.helper}>Color:</span>
+            <div className="flex flex-wrap gap-1.5">
+              {(theme.equationPalette || []).map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => setSelectedColor(selectedColor === color ? '' : color)}
+                  className={`w-8 h-8 rounded-full border-2 transition-all touch-feedback active:scale-90 ${
+                    selectedColor === color ? 'ring-2 ring-offset-2' : ''
+                  }`}
+                  style={{
+                    backgroundColor: color,
+                    borderColor: selectedColor === color ? color : themeStyles.input.borderColor,
+                  }}
+                  title={selectedColor === color ? 'Click to deselect' : `Select ${color}`}
+                />
+              ))}
+              <button
+                type="button"
+                onClick={() => setSelectedColor('')}
+                className="w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all touch-feedback active:scale-90"
+                style={{
+                  borderColor: themeStyles.input.borderColor,
+                  background: 'transparent',
+                  color: themeStyles.helper.color,
+                }}
+                title="Random color"
+              >
+                🎲
+              </button>
+            </div>
+          </div>
         </div>
+
+        <MathKeyboard
+          mode={inputMode}
+          onInsert={(text) => {
+            if (inputMode === 'latex') {
+              const next = latexInput + text;
+              handleLatexInput(next);
+            } else {
+              const next = input + text;
+              setInput(next);
+              setError('');
+            }
+          }}
+        />
       </form>
 
-      <div className="space-y-2 max-h-96 overflow-y-auto">
-        {equations.length === 0 ? (
-          <p className="text-sm text-center py-4" style={themeStyles.emptyState}>
-            No equations added yet
-          </p>
-        ) : (
-          equations.map((eq) => (
+      {/* History Section */}
+      <div className="space-y-2">
+        <button
+          type="button"
+          onClick={() => setShowHistory(!showHistory)}
+          className="flex items-center justify-between w-full px-3 py-2 rounded-lg border transition-all touch-feedback active:scale-98"
+          style={{ ...themeStyles.modeButton.inactive, borderColor: themeStyles.input.borderColor }}
+        >
+          <span className="text-sm font-medium" style={themeStyles.helper}>
+            Equation History ({equations.length})
+          </span>
+          <svg
+            className={`w-5 h-5 transition-transform ${showHistory ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        
+        {showHistory && (
+          <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
+            {equations.length === 0 ? (
+              <p className="text-sm text-center py-4" style={themeStyles.emptyState}>
+                No equations added yet
+              </p>
+            ) : (
+              equations.map((eq) => (
             <div
               key={eq.id}
               className="flex items-center gap-3 p-3 rounded-lg border transition-colors"
@@ -286,7 +440,39 @@ export default function EquationInput() {
             </div>
           ))
         )}
+          </div>
+        )}
       </div>
+
+      {/* Template Library Modal */}
+      {showTemplateLibrary && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowTemplateLibrary(false)}>
+          <div className="bg-inherit rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <EquationTemplateLibrary
+              onSelectTemplate={handleTemplateSelect}
+              currentMode={selectedMode}
+              onClose={() => setShowTemplateLibrary(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Custom Template Form Modal */}
+      {showCustomTemplateForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowCustomTemplateForm(false)}>
+          <div className="bg-inherit rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 border" style={themeStyles.panel} onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-xl font-bold mb-4" style={themeStyles.heading}>
+              Create Custom Template
+            </h2>
+            <CustomTemplateForm
+              onSave={handleCustomTemplateSave}
+              onCancel={() => setShowCustomTemplateForm(false)}
+              initialExpression={input}
+              initialMode={selectedMode}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

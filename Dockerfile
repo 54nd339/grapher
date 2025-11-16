@@ -1,5 +1,5 @@
 # ----- Stage 1: Build Stage -----
-FROM --platform=$BUILDPLATFORM node:18-alpine AS builder
+FROM --platform=$BUILDPLATFORM node:24-alpine AS builder
 
 WORKDIR /app
 COPY package*.json ./
@@ -9,7 +9,7 @@ RUN npm run build
 RUN npm prune --production
 
 # ----- Stage 2: Production Stage -----
-FROM node:18-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 ENV NODE_ENV=production

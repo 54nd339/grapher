@@ -45,7 +45,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen pb-24" style={pageStyles.layout}>
+    <div className="min-h-screen pb-12" style={pageStyles.layout}>
       {/* Header */}
       <header className="shadow-sm border-b" style={pageStyles.header}>
         <div className="max-w-full mx-auto px-4 sm:px-6 py-4">

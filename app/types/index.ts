@@ -88,6 +88,33 @@ export interface CalculationResult {
   domainIssues?: string[];
 }
 
+export type MathKeyboardMode = "expression" | "latex";
+
+export type MathKeyboardKeyDef = {
+  label: string;
+  insert: string;
+  aria?: string;
+};
+
+export interface UseMathKeyboardOptions {
+  mode: MathKeyboardMode;
+  onInsert: (text: string) => void;
+}
+
+export interface UseMathKeyboardResult {
+  visible: boolean;
+  toggleVisible: () => void;
+  position: { x: number; y: number };
+  size: { width: number; height: number };
+  handleDragStart: (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => void;
+  handleResizeStart: (
+    edge: "right" | "bottom" | "corner",
+    e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>
+  ) => void;
+  sections: { title: string; keys: MathKeyboardKeyDef[] }[];
+  handleKeyClick: (k: MathKeyboardKeyDef) => void;
+}
+
 export interface MatrixOperation {
   type: 'add' | 'subtract' | 'multiply' | 'inverse' | 'determinant' | 'transpose' | 'eigenvalues';
   matrices: number[][][];
@@ -174,3 +201,11 @@ export type ThemeOption<Name extends string = string> = {
   label: string;
   tokens: ThemeTokens;
 };
+
+// Re-export equation template types
+export type {
+  EquationTemplate,
+  TemplateCategory,
+  TemplateTag,
+  TemplateLibraryConfig,
+} from "./equationTemplates";

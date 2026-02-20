@@ -1,65 +1,152 @@
-import Image from "next/image";
+"use client";
+
+import { useMemo, useEffect, useRef, useCallback } from "react";
+import dynamic from "next/dynamic";
+import { useTheme } from "next-themes";
+import { Panel, Group, Separator, type PanelImperativeHandle } from "react-resizable-panels";
+import { useShallow } from "zustand/react/shallow";
+
+import { MathKeyboardToggle } from "@/components/editor";
+import { GraphViewport } from "@/components/graph";
+import { Toolbar, Sidebar, MobileSheet, ShortcutsOverlay } from "@/components/layout";
+import { SolverPanel } from "@/components/solver";
+import { CommandPalette } from "@/components/ui";
+import { buildCommands } from "@/lib/commands";
+import { useExpressionStore, useGraphStore, useSolverStore, useUIStore } from "@/stores";
+import { useMathKeyboard, useKeyboardShortcuts, useKonamiCode, useShareLink } from "@/hooks";
+import type { ExpressionKind } from "@/types";
+
+const DataImportModal = dynamic(
+  () => import("@/components/editor").then((m) => m.DataImportModal),
+  { ssr: false },
+);
 
 export default function Home() {
+  useKeyboardShortcuts();
+  useKonamiCode();
+  useShareLink();
+
+  const { visible: kbVisible, toggle: kbToggle } = useMathKeyboard();
+  const { setTheme, resolvedTheme } = useTheme();
+
+  const addExpression = useExpressionStore((s) => s.add);
+  const setGraphMode = useGraphStore((s) => s.setMode);
+  const toggleSolver = useSolverStore((s) => s.toggleVisible);
+  const {
+    toggleSidebar,
+    sidebarCollapsed,
+    setSidebarCollapsed,
+    dataImportOpen,
+    setDataImportOpen,
+    setFractalMode,
+  } = useUIStore(
+    useShallow((s) => ({
+      toggleSidebar: s.toggleSidebar,
+      sidebarCollapsed: s.sidebarCollapsed,
+      setSidebarCollapsed: s.setSidebarCollapsed,
+      dataImportOpen: s.dataImportOpen,
+      setDataImportOpen: s.setDataImportOpen,
+      setFractalMode: s.setFractalMode,
+    })),
+  );
+  const { toggleTangentLine, togglePolarGrid } = useGraphStore(
+    useShallow((s) => ({
+      toggleTangentLine: s.toggleTangentLine,
+      togglePolarGrid: s.togglePolarGrid,
+    })),
+  );
+  const sidebarPanelRef = useRef<PanelImperativeHandle>(null);
+
+  useEffect(() => {
+    const panel = sidebarPanelRef.current;
+    if (!panel) return;
+    if (sidebarCollapsed) panel.collapse();
+    else panel.expand();
+  }, [sidebarCollapsed]);
+
+  const addTemplate = useCallback((latex: string, kind: string) => {
+    addExpression();
+    const exprs = useExpressionStore.getState().expressions;
+    const last = exprs[exprs.length - 1];
+    if (last) {
+      useExpressionStore.getState().update(last.id, { latex, kind: kind as ExpressionKind });
+    }
+  }, [addExpression]);
+
+  const commands = useMemo(
+    () =>
+      buildCommands({
+        addExpression,
+        setGraphMode,
+        toggleSolver,
+        toggleTheme: () =>
+          setTheme(resolvedTheme === "dark" ? "light" : "dark"),
+        toggleSidebar,
+        addTemplate,
+        openDataImport: () => setDataImportOpen(true),
+        setFractalMode,
+        toggleTangentLine,
+        togglePolarGrid,
+      }),
+    [addExpression, setGraphMode, toggleSolver, setTheme, resolvedTheme, toggleSidebar, addTemplate, setDataImportOpen, setFractalMode, toggleTangentLine, togglePolarGrid]
+  );
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div id="main-content" className="flex h-dvh flex-col overflow-hidden bg-background">
+      <Toolbar />
+
+      <div className="relative flex-1 overflow-hidden">
+        {/* Desktop/tablet: resizable panels */}
+        <div className="hidden h-full md:block">
+          <Group orientation="horizontal">
+            <Panel
+              panelRef={sidebarPanelRef}
+              defaultSize="22%"
+              minSize="15%"
+              maxSize="40%"
+              collapsible
+              collapsedSize="0%"
+              onResize={(size) => {
+                const collapsed = size.asPercentage === 0;
+                if (collapsed !== sidebarCollapsed) setSidebarCollapsed(collapsed);
+              }}
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              <Sidebar />
+            </Panel>
+
+            <Separator className="w-px bg-border hover:w-1 hover:bg-accent/30 transition-all" />
+
+            <Panel defaultSize="78%">
+              <GraphViewport />
+            </Panel>
+          </Group>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* Mobile: stacked layout with expandable bottom sheet */}
+        <div className="flex h-full flex-col md:hidden">
+          <div className="flex-1">
+            <GraphViewport />
+          </div>
+          {!sidebarCollapsed && (
+            <MobileSheet>
+              <Sidebar />
+            </MobileSheet>
+          )}
         </div>
-      </main>
+
+        {/* Solver drawer overlays the graph */}
+        <SolverPanel />
+      </div>
+
+      {/* Math keyboard toggle -- fixed bottom-right */}
+      <div className="fixed bottom-4 right-4 z-20 md:bottom-6 md:right-6">
+        <MathKeyboardToggle visible={kbVisible} onToggle={kbToggle} />
+      </div>
+
+      {/* Overlays */}
+      <CommandPalette commands={commands} />
+      <ShortcutsOverlay />
+      {dataImportOpen && <DataImportModal onClose={() => setDataImportOpen(false)} />}
     </div>
   );
 }

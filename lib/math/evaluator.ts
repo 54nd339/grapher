@@ -1,4 +1,4 @@
-import { ceCompile, type EvalFn } from "./ce-compile";
+import { ceCompile } from "./ce-compile";
 
 /**
  * Evaluate a series partial sum: sum(body, variable, lower, upper).

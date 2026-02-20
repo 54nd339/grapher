@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Point } from "mafs";
 
 import { compileExpressionLatex, findZeros, findExtrema, findIntersections } from "@/lib/math";
@@ -16,44 +16,61 @@ export function AnalysisOverlay({
 }) {
   const viewport = useGraphStore((s) => s.viewport);
 
-  const data = useMemo(() => {
+  const [data, setData] = useState<{
+    zeros: { x: number }[];
+    minima: { x: number; y: number }[];
+    maxima: { x: number; y: number }[];
+  }>({ zeros: [], minima: [], maxima: [] });
+
+  useEffect(() => {
     if (
       expression.kind === "slider" ||
       expression.kind === "implicit" ||
       expression.kind === "parametric" ||
       expression.kind === "polar" ||
       expression.kind === "differential"
-    )
-      return { zeros: [] as { x: number }[], minima: [] as { x: number; y: number }[], maxima: [] as { x: number; y: number }[] };
+    ) {
+      setData({ zeros: [], minima: [], maxima: [] });
+      return;
+    }
 
     const compiled = compileExpressionLatex(expression.latex, {
       mode: "graph-2d",
       allowUserFunctions: true,
     });
-    if (!compiled) return { zeros: [], minima: [], maxima: [] };
-
-    try {
-      const zeros = findZeros(compiled, viewport.xMin, viewport.xMax, scope);
-      const { minima, maxima } = findExtrema(
-        compiled,
-        viewport.xMin,
-        viewport.xMax,
-        scope,
-      );
-      return {
-        zeros: zeros.map((x) => ({ x })),
-        minima: minima.map((x) => ({
-          x,
-          y: compiled({ ...scope, x }) as number,
-        })),
-        maxima: maxima.map((x) => ({
-          x,
-          y: compiled({ ...scope, x }) as number,
-        })),
-      };
-    } catch {
-      return { zeros: [], minima: [], maxima: [] };
+    if (!compiled) {
+      setData({ zeros: [], minima: [], maxima: [] });
+      return;
     }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const [zeros, extrema] = await Promise.all([
+          findZeros(expression.latex, true, viewport.xMin, viewport.xMax, scope),
+          findExtrema(expression.latex, true, viewport.xMin, viewport.xMax, scope),
+        ]);
+
+        if (cancelled) return;
+
+        setData({
+          zeros: zeros.map((x) => ({ x })),
+          minima: extrema.minima.map((x) => ({
+            x,
+            y: compiled({ ...scope, x }) as number,
+          })),
+          maxima: extrema.maxima.map((x) => ({
+            x,
+            y: compiled({ ...scope, x }) as number,
+          })),
+        });
+      } catch {
+        if (!cancelled) setData({ zeros: [], minima: [], maxima: [] });
+      }
+    })();
+
+    return () => { cancelled = true; };
   }, [expression, scope, viewport]);
 
   return (
@@ -80,37 +97,52 @@ export function IntersectionOverlay({
 }) {
   const viewport = useGraphStore((s) => s.viewport);
 
-  const points = useMemo(() => {
+  const [points, setPoints] = useState<Array<[number, number]>>([]);
+
+  useEffect(() => {
     const algebraicExprs = expressions.filter(
       (e) =>
         e.visible &&
         e.latex &&
         (e.kind === "algebraic" || e.kind === "trigonometric" || e.kind === "calculus" || e.kind === "series"),
     );
-    if (algebraicExprs.length < 2) return [];
+    if (algebraicExprs.length < 2) {
+      setPoints([]);
+      return;
+    }
 
-    const compiled = algebraicExprs.map((e) => {
-      return compileExpressionLatex(e.latex, {
+    const compiled = algebraicExprs.map((e) =>
+      compileExpressionLatex(e.latex, {
         mode: "graph-2d",
         allowUserFunctions: true,
-      });
-    });
+      }),
+    );
 
-    const result: Array<[number, number]> = [];
-    for (let i = 0; i < compiled.length; i++) {
-      for (let j = i + 1; j < compiled.length; j++) {
-        if (!compiled[i] || !compiled[j]) continue;
-        const pts = findIntersections(
-          compiled[i]!,
-          compiled[j]!,
-          viewport.xMin,
-          viewport.xMax,
-          scope,
-        );
-        result.push(...pts);
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const result: Array<[number, number]> = [];
+        for (let i = 0; i < compiled.length; i++) {
+          for (let j = i + 1; j < compiled.length; j++) {
+            if (!compiled[i] || !compiled[j]) continue;
+            const pts = await findIntersections(
+              algebraicExprs[i].latex,
+              algebraicExprs[j].latex,
+              viewport.xMin,
+              viewport.xMax,
+              scope,
+            );
+            result.push(...pts);
+          }
+        }
+        if (!cancelled) setPoints(result);
+      } catch {
+        if (!cancelled) setPoints([]);
       }
-    }
-    return result;
+    })();
+
+    return () => { cancelled = true; };
   }, [expressions, scope, viewport]);
 
   return (

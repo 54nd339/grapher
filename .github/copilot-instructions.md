@@ -1,6 +1,5 @@
 ---
 description: Grapher project coding conventions and architecture rules
-alwaysApply: true
 ---
 
 # Grapher Conventions
@@ -13,6 +12,9 @@ alwaysApply: true
 - Default to **Server Components**. Add `'use client'` only on interactive leaf components that need browser APIs, event handlers, or hooks.
 - Use `next/link` instead of `<a>`. Use `next/image` instead of `<img>`.
 - Avoid prop drilling. Use Zustand stores, React context, or composition (children/render props).
+- **Web Worker Offloading**: Heavy mathematical computations (like $O(N^2)$ implicit grids, $O(N^3)$ 3D surface mapping, RK4 integrations, and high-frequency calculus) MUST be offloaded to `workers/math.worker.ts` using Comlink. 
+  - Send raw strings (`latex` or plain expression) and the `scope` to the worker for `ceCompile` compilation. Never evaluate on the main thread just to send large arrays.
+  - Simple $O(N)$ iterations (like 120-step polygons) or `Plot.OfX` adaptive sampling should remain synchronous on the main thread to avoid IPC latency overhead.
 
 ## State Management
 

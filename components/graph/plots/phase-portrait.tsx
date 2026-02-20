@@ -1,10 +1,11 @@
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState, useEffect } from "react";
 import { Plot, Point, type vec } from "mafs";
 
-import { rk4, ceCompile } from "@/lib/math";
+import { ceCompile } from "@/lib/math";
 import { useGraphStore } from "@/stores";
+import { getMathWorker } from "@/workers/math-api";
 
 interface PhasePortraitProps {
   dxExpr: string;
@@ -31,38 +32,35 @@ export const PhasePortrait = memo(function PhasePortrait({
   }, [dxExpr, dyExpr]);
 
   // Compute trajectories from grid seed points
-  const trajectories = useMemo(() => {
-    if (!fns) return [];
-    const { fx, fy } = fns;
+  const [trajectories, setTrajectories] = useState<vec.Vector2[][]>([]);
 
-    const systemFn = (_t: number, state: number[]): number[] => {
-      const [x, y] = state;
-      const dxVal = fx({ x, y });
-      const dyVal = fy({ x, y });
-      return [
-        typeof dxVal === "number" && isFinite(dxVal) ? dxVal : 0,
-        typeof dyVal === "number" && isFinite(dyVal) ? dyVal : 0,
-      ];
-    };
+  useEffect(() => {
+    let cancelled = false;
 
-    const step = (viewport.xMax - viewport.xMin) / 4;
-    const result: vec.Vector2[][] = [];
-
-    for (let sx = viewport.xMin; sx <= viewport.xMax; sx += step) {
-      for (let sy = viewport.yMin; sy <= viewport.yMax; sy += step) {
-        const sol = rk4(systemFn, [0, 10], [sx, sy], 200);
-        const pts: vec.Vector2[] = [];
-        for (let i = 0; i < sol.t.length; i++) {
-          const [x, y] = sol.y[i];
-          if (!isFinite(x) || !isFinite(y) || Math.abs(x) > 1e4 || Math.abs(y) > 1e4) break;
-          pts.push([x, y]);
+    (async () => {
+      try {
+        const step = (viewport.xMax - viewport.xMin) / 4;
+        const worker = getMathWorker();
+        const pts = await worker.solveSystemODEPlot(
+          dxExpr,
+          dyExpr,
+          viewport.xMin,
+          viewport.xMax,
+          viewport.yMin,
+          viewport.yMax,
+          step,
+          step
+        );
+        if (!cancelled) {
+          setTrajectories(pts as vec.Vector2[][]);
         }
-        if (pts.length > 2) result.push(pts);
+      } catch {
+        if (!cancelled) setTrajectories([]);
       }
-    }
+    })();
 
-    return result;
-  }, [fns, viewport]);
+    return () => { cancelled = true; };
+  }, [dxExpr, dyExpr, viewport.xMin, viewport.xMax, viewport.yMin, viewport.yMax]);
 
   if (!fns) return null;
 

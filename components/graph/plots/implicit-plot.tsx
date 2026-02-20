@@ -1,63 +1,59 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Line, Plot } from "mafs";
 
 import { latexToExpr } from "@/lib/latex";
-import { ceCompileImplicitFromLatex, marchingSquares, tryParametrizeImplicit } from "@/lib/math";
+import { marchingSquares, tryParametrizeImplicit } from "@/lib/math";
 import { useGraphStore } from "@/stores";
 import type { Expression } from "@/types";
+import type { PathRing } from "@/workers/math.worker";
 
 export function ImplicitPlot({ expression }: { expression: Expression }) {
   const viewport = useGraphStore((s) => s.viewport);
 
-  const plainExpr = useMemo(() => latexToExpr(expression.latex), [expression.latex]);
+  const [rings, setRings] = useState<PathRing[]>([]);
 
-  const parametricForm = useMemo(
-    () => tryParametrizeImplicit(plainExpr),
-    [plainExpr],
-  );
+  const plainExpr = latexToExpr(expression.latex);
+  const parametricForm = tryParametrizeImplicit(plainExpr);
 
-  const implicitExpr = useMemo(() => {
+  const implicitExpr = (() => {
     const [lhs, rhs = "0"] = plainExpr.split("=");
     if (!lhs) return null;
     return `(${lhs})-(${rhs})`;
-  }, [plainExpr]);
+  })();
 
-  // Compile directly from LaTeX to avoid the lossy plain-text round-trip
-  // that can mangle complex expressions like (x²+y²−1)³−x²y³=0
-  const compiledFn = useMemo(
-    () => ceCompileImplicitFromLatex(expression.latex),
-    [expression.latex],
-  );
-
-  const gridSize = useMemo(() => {
+  const gridSize = (() => {
     const xSpan = Math.abs(viewport.xMax - viewport.xMin);
     const ySpan = Math.abs(viewport.yMax - viewport.yMin);
     const maxSpan = Math.max(xSpan, ySpan);
-    if (maxSpan <= 8) return 240;
-    if (maxSpan <= 20) return 190;
-    if (maxSpan <= 50) return 150;
-    return 120;
-  }, [viewport.xMax, viewport.xMin, viewport.yMax, viewport.yMin]);
+    if (maxSpan <= 8) return 1000; // Ultra high-res when zoomed in
+    if (maxSpan <= 20) return 800; // High-res
+    if (maxSpan <= 50) return 600; // Medium
+    return 300; // Fallback for very wide zooms
+  })();
 
-  const segments = useMemo(() => {
-    if (parametricForm) return [];
-    if (!implicitExpr) return [];
-    return marchingSquares(
+  useEffect(() => {
+    if (parametricForm || !implicitExpr) {
+      setRings([]);
+      return;
+    }
+    let cancelled = false;
+    marchingSquares(
       implicitExpr,
       viewport.xMin,
       viewport.xMax,
       viewport.yMin,
       viewport.yMax,
       gridSize,
-      compiledFn,
-    );
+    ).then((result) => {
+      if (!cancelled) setRings(result);
+    });
+    return () => { cancelled = true; };
   }, [
     gridSize,
     parametricForm,
     implicitExpr,
-    compiledFn,
     viewport.xMax,
     viewport.xMin,
     viewport.yMax,
@@ -168,12 +164,19 @@ export function ImplicitPlot({ expression }: { expression: Expression }) {
         />
       )}
 
-      {segments.map((segment, index) => (
-        <Line.Segment
+      {rings.map((ring, index) => (
+        <Plot.Parametric
           key={`${expression.id}-${index}`}
-          point1={[segment.x1, segment.y1]}
-          point2={[segment.x2, segment.y2]}
+          t={[0, ring.length - 1]}
+          xy={(t) => {
+            const i = Math.min(Math.floor(t), ring.length - 2);
+            const frac = t - i;
+            const [x1, y1] = ring[i];
+            const [x2, y2] = ring[i + 1];
+            return [x1 + frac * (x2 - x1), y1 + frac * (y2 - y1)];
+          }}
           color={expression.color}
+          weight={expression.kind === "inequality" ? 0 : 2}
         />
       ))}
     </>

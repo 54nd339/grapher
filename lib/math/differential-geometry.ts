@@ -1,34 +1,6 @@
 import type { EvalFn } from "./ce-compile";
 import { safeEval } from "./safe-eval";
 
-/**
- * Compute the arc length of f(x) over [a, b] using Simpson's rule on sqrt(1 + f'(x)^2).
- */
-export function arcLength(
-  fn: EvalFn,
-  a: number,
-  b: number,
-  scope: Record<string, number>,
-  n = 200,
-): number {
-  if (!isFinite(a) || !isFinite(b) || a >= b) return 0;
-  const h = (b - a) / n;
-  const H = 1e-6;
-
-  let sum = 0;
-  for (let i = 0; i <= n; i++) {
-    const x = a + i * h;
-    const yp = safeEval(fn, { ...scope, x: x + H });
-    const ym = safeEval(fn, { ...scope, x: x - H });
-    const deriv = (yp - ym) / (2 * H);
-    const integrand = Math.sqrt(1 + deriv * deriv);
-
-    if (i === 0 || i === n) sum += integrand;
-    else if (i % 2 === 1) sum += 4 * integrand;
-    else sum += 2 * integrand;
-  }
-  return (h / 3) * sum;
-}
 
 /**
  * Compute the signed curvature κ(x) = f''(x) / (1 + f'(x)^2)^(3/2).

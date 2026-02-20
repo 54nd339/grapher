@@ -32,7 +32,7 @@ export const GPU_GRID_SIZE = 200;
 export const IMPLICIT_MC_RESOLUTION = 180;
 export const IMPLICIT_VIEW_MIN = -5;
 export const IMPLICIT_VIEW_MAX = 5;
-export const IMPLICIT_MAX_POLYGONS = 80000;
+export const IMPLICIT_MAX_POLYGONS = 300000;
 export const IMPLICIT_TIME_BUDGET_MS = 3600;
 
 export const APP_NAME = "Grapher";

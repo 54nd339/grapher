@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Point, Plot, Text, Line } from "mafs";
 
-import { compileExpressionLatex, safeEval, curvature, arcLength } from "@/lib/math";
+import { compileExpressionLatex, safeEval, curvature } from "@/lib/math";
+import { toPlainExpression } from "@/lib/math/expression-resolution";
+import { getMathWorker } from "@/workers/math-api";
 import { useGraphStore } from "@/stores";
 import type { Expression } from "@/types";
 
@@ -33,11 +35,47 @@ export function CurvatureOverlay({ expression, scope, hoverX }: CurvatureOverlay
     return compileExpressionLatex(expression.latex, { mode: "graph-2d" });
   }, [expression]);
 
-  const arcLen = useMemo(() => {
-    if (!fn) return null;
-    const len = arcLength(fn, viewport.xMin, viewport.xMax, scope);
-    return isFinite(len) ? len : null;
-  }, [fn, viewport.xMin, viewport.xMax, scope]);
+  const [arcLen, setArcLen] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (
+      expression.kind === "slider" ||
+      expression.kind === "implicit" ||
+      expression.kind === "points" ||
+      expression.kind === "parametric" ||
+      expression.kind === "polar"
+    ) {
+      setArcLen(null);
+      return;
+    }
+
+    let cancelled = false;
+    const compute = async () => {
+      try {
+        const worker = getMathWorker();
+        const plainLatex = toPlainExpression(expression.latex, "graph-2d");
+        const len = await worker.computeArcLength(
+          plainLatex,
+          true,
+          viewport.xMin,
+          viewport.xMax,
+          scope
+        );
+        if (!cancelled && typeof len === "number" && isFinite(len)) {
+          setArcLen(len);
+        } else if (!cancelled) {
+          setArcLen(null);
+        }
+      } catch {
+        if (!cancelled) setArcLen(null);
+      }
+    };
+    compute();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [expression.latex, expression.kind, viewport.xMin, viewport.xMax, scope]);
 
   const curveData = useMemo(() => {
     if (!fn || hoverX == null) return null;

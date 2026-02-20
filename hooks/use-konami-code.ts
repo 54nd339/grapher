@@ -25,9 +25,9 @@ const EASTER_EGG_EXPRESSIONS = [
     kind: "implicit" as const,
   },
   {
-    latex: String.raw`\left(2\sin\left(t\right)-\sin\left(2t\right),2\cos\left(t\right)-\cos\left(2t\right)\right)`,
-    color: "#0ea5e9",
-    kind: "parametric" as const,
+    latex: String.raw`(x^2 + \frac{9}{4}y^2 + z^2 - 1)^3 - x^2 z^3 - \frac{9}{80}y^2 z^3 = 0`,
+    color: "#ef4444",
+    kind: "implicit" as const,
   },
 ];
 

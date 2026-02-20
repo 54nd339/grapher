@@ -74,6 +74,12 @@ function functionHeadToExpr(head: MathJsonExpression): string | null {
   return null;
 }
 
+function splitBoundVariable(bound: string, defaultVariable: string): { variable: string; value: string } {
+  const match = bound.trim().match(/^([a-zA-Z][a-zA-Z0-9_]*)\s*=\s*(.+)$/);
+  if (!match) return { variable: defaultVariable, value: bound.trim() };
+  return { variable: match[1].trim(), value: match[2].trim() };
+}
+
 /* ── MathJSON → plain text ─────────────────────────────── */
 
 function jsonToExpr(json: MathJsonExpression): string {
@@ -166,13 +172,25 @@ function jsonToExpr(json: MathJsonExpression): string {
   if (head === "Sum") {
     const body = jsonToExpr(args[0]);
     const b = args.length >= 2 ? bounds(args[1]) : null;
-    if (b && b.length >= 3) return `sum(${body}, ${jsonToExpr(b[0])}, ${jsonToExpr(b[1])}, ${jsonToExpr(b[2])})`;
+    if (b && b.length >= 3) {
+      const variable = jsonToExpr(b[0]).trim() || "n";
+      const lowerRaw = jsonToExpr(b[1]);
+      const upperRaw = jsonToExpr(b[2]);
+      const normalizedLower = splitBoundVariable(lowerRaw, variable);
+      return `sum(${body}, ${normalizedLower.variable}, ${normalizedLower.value}, ${upperRaw.trim()})`;
+    }
     return `sum(${body}, n, 0, 10)`;
   }
   if (head === "Product") {
     const body = jsonToExpr(args[0]);
     const b = args.length >= 2 ? bounds(args[1]) : null;
-    if (b && b.length >= 3) return `prod(${body}, ${jsonToExpr(b[0])}, ${jsonToExpr(b[1])}, ${jsonToExpr(b[2])})`;
+    if (b && b.length >= 3) {
+      const variable = jsonToExpr(b[0]).trim() || "n";
+      const lowerRaw = jsonToExpr(b[1]);
+      const upperRaw = jsonToExpr(b[2]);
+      const normalizedLower = splitBoundVariable(lowerRaw, variable);
+      return `prod(${body}, ${normalizedLower.variable}, ${normalizedLower.value}, ${upperRaw.trim()})`;
+    }
     return `prod(${body}, n, 1, 10)`;
   }
 
@@ -212,7 +230,8 @@ function jsonToExpr(json: MathJsonExpression): string {
   if (head === "Subscript") return jsonToExpr(args[0]);
 
   // Containers / metadata — pass through or ignore
-  if (head === "Delimiter" || head === "Hold") return args.length > 0 ? jsonToExpr(args[0]) : "";
+  if (head === "Delimiter") return args.length > 0 ? `(${jsonToExpr(args[0])})` : "()";
+  if (head === "Hold") return args.length > 0 ? jsonToExpr(args[0]) : "";
   if (head === "Sequence" || head === "Pair" || head === "Triple" || head === "Tuple" || head === "Limits")
     return args.map(a => jsonToExpr(a)).join(", ");
   if (head === "Error" || head === "LatexString") return "";
@@ -284,18 +303,34 @@ export function latexToExpr(latex: string): string {
   if (!latex.trim()) return "";
   const normalized = normalizeLatexInput(latex).trim();
 
+  const parsePart = (part: string): string => {
+    const trimmed = part.trim();
+    if (!trimmed) return "";
+    try {
+      const expr = getCE().parse(trimmed, { form: "raw" });
+      const parsed = jsonToExpr(expr.json).trim();
+      return parsed || trimmed;
+    } catch {
+      return trimmed;
+    }
+  };
+
   // CE drops bounds for forms like \sum_2^{100} n (without explicit index variable).
   // Preserve bounds via direct LaTeX fallback before CE parse.
   const sumNoIndex = normalized.match(/^\\sum_\{?([^{}]+)\}?\^\{?([^{}]+)\}?\s*(.+)$/);
   if (sumNoIndex) {
     const [, lower, upper, body] = sumNoIndex;
-    return `sum(${body.trim()}, n, ${lower.trim()}, ${upper.trim()})`;
+    const { variable, value: lowerExpr } = splitBoundVariable(lower, "n");
+    const bodyExpr = parsePart(body);
+    return `sum(${bodyExpr}, ${variable}, ${parsePart(lowerExpr)}, ${parsePart(upper)})`;
   }
 
   const prodNoIndex = normalized.match(/^\\prod_\{?([^{}]+)\}?\^\{?([^{}]+)\}?\s*(.+)$/);
   if (prodNoIndex) {
     const [, lower, upper, body] = prodNoIndex;
-    return `prod(${body.trim()}, n, ${lower.trim()}, ${upper.trim()})`;
+    const { variable, value: lowerExpr } = splitBoundVariable(lower, "n");
+    const bodyExpr = parsePart(body);
+    return `prod(${bodyExpr}, ${variable}, ${parsePart(lowerExpr)}, ${parsePart(upper)})`;
   }
 
   try {

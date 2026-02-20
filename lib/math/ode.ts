@@ -2,7 +2,7 @@ import { ceCompile, type EvalFn } from "./ce-compile";
 import { rearrangeImplicitODE } from "./ode-rearrange";
 import type { PlotPoint, ODEInitialCondition } from "./types";
 
-async function integrateWithOdex(
+export async function integrateWithOdex(
   f: (t: number, y: number[]) => number[],
   tSpan: [number, number],
   y0: number[],

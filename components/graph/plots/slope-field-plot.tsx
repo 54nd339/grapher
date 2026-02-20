@@ -1,12 +1,13 @@
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState, useEffect } from "react";
 import { Plot, type vec } from "mafs";
 
 import { latexToExpr } from "@/lib/latex";
-import { safeEval, rk4, rearrangeImplicitODE, secondOrderToSystem, ceCompile, ceCompileFromLatex } from "@/lib/math";
+import { safeEval, ceCompile, ceCompileFromLatex } from "@/lib/math";
 import { useGraphStore } from "@/stores";
 import { useCompiledFromLatex, useSliderScope } from "@/hooks";
+import { getMathWorker } from "@/workers/math-api";
 import type { Expression } from "@/types";
 
 export const SlopeFieldPlot = memo(function SlopeFieldPlot({ expression }: { expression: Expression }) {
@@ -19,23 +20,21 @@ export const SlopeFieldPlot = memo(function SlopeFieldPlot({ expression }: { exp
     // Second-order: y'' = f(x, y, y')
     const secondOrderMatch = raw.match(/^(?:y''|d\^?2y\/dx\^?2)\s*=\s*(.+)$/);
     if (secondOrderMatch) {
-      const systemFn = secondOrderToSystem(secondOrderMatch[1].trim());
-      return systemFn ? { type: "second-order" as const, systemFn } : null;
+      const rhs = secondOrderMatch[1].trim();
+      return { type: "second-order" as const, rawExpr: rhs, isImplicit: false, fn: null };
     }
 
     // Explicit first-order: y' = f(x,y) or dy/dx = f(x,y)
     const explicitMatch = raw.match(/^(dy\/dx|y')\s*=\s*(.+)$/);
     if (explicitMatch) {
       const rhs = explicitMatch[2].trim();
-      // Primary: compile from LaTeX; Fallback: plain text
       const fn = ceCompileFromLatex(rhs) ?? ceCompile(rhs);
-      return fn ? { type: "first-order" as const, fn } : null;
+      return fn ? { type: "first-order" as const, rawExpr: rhs, isImplicit: false, fn } : null;
     }
 
     // Implicit first-order: F(x, y, y') = 0
     if (/y'/.test(raw)) {
-      const result = rearrangeImplicitODE(raw);
-      return result ? { type: "first-order" as const, fn: result.rhsFn } : null;
+      return { type: "implicit" as const, rawExpr: raw, isImplicit: true, fn: null };
     }
 
     return null;
@@ -51,51 +50,34 @@ export const SlopeFieldPlot = memo(function SlopeFieldPlot({ expression }: { exp
   // Use either the explicit compiled fn or the rearranged implicit fn
   const slopeFn = odeData?.type === "first-order" ? odeData.fn : compiledExplicit;
 
-  // Solution curve(s) via RK4
-  const solutionPts = useMemo(() => {
-    if (!odeData) return [];
+  // Solution curve(s) via worker RK4
+  const [solutionPts, setSolutionPts] = useState<[number, number][]>([]);
 
-    if (odeData.type === "second-order") {
-      // y'' system: state = [y, y'], initial = [y(0)=1, y'(0)=0]
-      const fwd = rk4(odeData.systemFn, [0, viewport.xMax + 2], [1, 0], 400);
-      const bwd = rk4(odeData.systemFn, [0, viewport.xMin - 2], [1, 0], 400);
+  useEffect(() => {
+    if (!odeData) {
+      setSolutionPts([]);
+      return;
+    }
+    let cancelled = false;
 
-      const pts: vec.Vector2[] = [];
-      for (let i = bwd.t.length - 1; i > 0; i--) {
-        const y = bwd.y[i][0];
-        if (!isFinite(y) || Math.abs(y) > 1e6) continue;
-        pts.push([bwd.t[i], y]);
+    (async () => {
+      try {
+        const worker = getMathWorker();
+        const pts = await worker.computeSlopeFieldSolution(
+          odeData.rawExpr,
+          odeData.type,
+          !odeData.isImplicit, // isLatex = false for implicit since we send pre-parsed raw text
+          viewport.xMin,
+          viewport.xMax,
+          scope
+        );
+        if (!cancelled) setSolutionPts(pts);
+      } catch {
+        if (!cancelled) setSolutionPts([]);
       }
-      for (let i = 0; i < fwd.t.length; i++) {
-        const y = fwd.y[i][0];
-        if (!isFinite(y) || Math.abs(y) > 1e6) break;
-        pts.push([fwd.t[i], y]);
-      }
-      return pts;
-    }
+    })();
 
-    // First-order ODE
-    const fn = odeData.fn;
-    const odeFn = (_t: number, yArr: number[]): number[] => {
-      const val = safeEval(fn, { ...scope, x: _t, y: yArr[0] });
-      return [isNaN(val) ? 0 : val];
-    };
-
-    const fwd = rk4(odeFn, [0, viewport.xMax + 2], [1], 400);
-    const bwd = rk4(odeFn, [0, viewport.xMin - 2], [1], 400);
-
-    const pts: vec.Vector2[] = [];
-    for (let i = bwd.t.length - 1; i > 0; i--) {
-      const y = bwd.y[i][0];
-      if (!isFinite(y) || Math.abs(y) > 1e6) continue;
-      pts.push([bwd.t[i], y]);
-    }
-    for (let i = 0; i < fwd.t.length; i++) {
-      const y = fwd.y[i][0];
-      if (!isFinite(y) || Math.abs(y) > 1e6) break;
-      pts.push([fwd.t[i], y]);
-    }
-    return pts;
+    return () => { cancelled = true; };
   }, [odeData, scope, viewport.xMin, viewport.xMax]);
 
   if (!slopeFn && odeData?.type !== "second-order") return null;

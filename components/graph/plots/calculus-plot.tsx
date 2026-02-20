@@ -1,11 +1,12 @@
 "use client";
 
-import { memo, useMemo } from "react";
-import { Plot, Polygon, type vec } from "mafs";
+import { memo, useMemo, useState, useEffect } from "react";
+import { Plot, Polygon, Polyline, type vec } from "mafs";
 
 import { latexToExpr, getCE } from "@/lib/latex";
 import { ceCompileFromLatex, type EvalFn, safeEval, simpsonIntegrate } from "@/lib/math";
 import { useCompiledFn, useCompiledFromLatex, useSliderScope } from "@/hooks";
+import { useGraphStore } from "@/stores";
 import type { Expression } from "@/types";
 
 export const CalculusPlot = memo(function CalculusPlot({ expression }: { expression: Expression }) {
@@ -206,20 +207,51 @@ function VariableBoundIntegralPlot({
   const upperFromPlain = useCompiledFn(upperExpr, !upperFromLatex);
   const upperCompiled = upperFromLatex ?? upperFromPlain;
   const scope = useSliderScope();
+  const viewport = useGraphStore((s) => s.viewport);
+  const [points, setPoints] = useState<vec.Vector2[]>([]);
 
-  if (!bodyCompiled) return null;
+  useEffect(() => {
+    if (!bodyCompiled) {
+      setPoints([]);
+      return;
+    }
+    let cancelled = false;
 
-  return (
-    <Plot.OfX
-      y={(x) => {
-        const lo = lowerCompiled ? safeEval(lowerCompiled, { ...scope, x }) : NaN;
-        const hi = upperCompiled ? safeEval(upperCompiled, { ...scope, x }) : NaN;
-        if (isNaN(lo) || isNaN(hi)) return NaN;
-        return simpsonIntegrate(bodyCompiled, integVar, lo, hi, scope);
-      }}
-      color={color}
-    />
-  );
+    (async () => {
+      try {
+        const steps = 150;
+        const dx = (viewport.xMax - viewport.xMin) / steps;
+        const promises = [];
+
+        for (let i = 0; i <= steps; i++) {
+          const x = viewport.xMin + i * dx;
+          const lo = lowerCompiled ? safeEval(lowerCompiled, { ...scope, x }) : NaN;
+          const hi = upperCompiled ? safeEval(upperCompiled, { ...scope, x }) : NaN;
+
+          if (isNaN(lo) || isNaN(hi)) {
+            promises.push(Promise.resolve([x, NaN] as vec.Vector2));
+          } else {
+            promises.push(
+              simpsonIntegrate(body, false, integVar, lo, hi, scope)
+                .then((y) => [x, y] as vec.Vector2)
+                .catch(() => [x, NaN] as vec.Vector2)
+            );
+          }
+        }
+
+        const pts = await Promise.all(promises);
+        if (!cancelled) setPoints(pts.filter((p) => !isNaN(p[1])));
+      } catch {
+        if (!cancelled) setPoints([]);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [bodyCompiled, lowerCompiled, upperCompiled, scope, viewport.xMin, viewport.xMax, integVar]);
+
+  if (!bodyCompiled || points.length === 0) return null;
+
+  return <Polyline points={points} color={color} />;
 }
 
 function expressionEqual(a: { expression: Expression }, b: { expression: Expression }) {

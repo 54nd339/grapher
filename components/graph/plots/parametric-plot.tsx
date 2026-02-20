@@ -14,14 +14,15 @@ import type { Expression } from "@/types";
  * correct comma.
  */
 function splitParametricLatex(latex: string): [string, string] | null {
-  // Strip outer \left( ... \right) or ( ... )
-  const stripped = latex
-    .replace(/^\\left\s*\(/, "")
-    .replace(/\\right\s*\)$/, "")
-    .replace(/^\\mleft\s*\(/, "")
-    .replace(/\\mright\s*\)$/, "")
-    .replace(/^\(/, "")
-    .replace(/\)$/, "");
+  let stripped = latex.trim();
+
+  if (stripped.startsWith("\\left(") && stripped.endsWith("\\right)")) {
+    stripped = stripped.slice(6, -7);
+  } else if (stripped.startsWith("\\mleft(") && stripped.endsWith("\\mright)")) {
+    stripped = stripped.slice(7, -8);
+  } else if (stripped.startsWith("(") && stripped.endsWith(")")) {
+    stripped = stripped.slice(1, -1);
+  }
 
   let depth = 0;
   for (let i = 0; i < stripped.length; i++) {

@@ -4,19 +4,20 @@ import { useCallback } from "react";
 
 import { latexToExpr } from "@/lib/latex";
 import { detectExpressionKind } from "@/lib/math";
+import * as rx from "@/lib/math/regex";
 import { useExpressionStore } from "@/stores";
 
 function parsePointPairsFromLatex(latex: string): [number, number][] {
   const normalized = latex
-    .replace(/\\left/g, "")
-    .replace(/\\right/g, "")
-    .replace(/\s+/g, "");
+    .replace(rx.REGEX_LATEX_LEFT, "")
+    .replace(rx.REGEX_LATEX_RIGHT, "")
+    .replace(rx.REGEX_WHITESPACE, "");
 
-  const fullPattern = /^\((-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)\)(,\((-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)\))*$/;
+  const fullPattern = rx.REGEX_POINT_PAIRS_FULL;
   if (!fullPattern.test(normalized)) return [];
 
   const pairs: [number, number][] = [];
-  const regex = /\((-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)\)/g;
+  const regex = rx.REGEX_POINT_PAIR_MATCH;
   let match: RegExpExecArray | null;
   while ((match = regex.exec(normalized)) !== null) {
     pairs.push([Number(match[1]), Number(match[2])]);
@@ -48,19 +49,19 @@ export function useUpdateExpression() {
       let kind = detectExpressionKind(expr);
 
       // Detect Leibniz derivatives in LaTeX that the plain-text detector misses
-      if (kind === "algebraic" && /\\frac\{(?:\\mathrm\{d\}|d)\^?\{?\d*\}?\}\{(?:\\mathrm\{d\}|d)/.test(latex)) {
+      if (kind === "algebraic" && rx.REGEX_LEIBNIZ_LATEX_LOOSE.test(latex)) {
         kind = "calculus";
       }
 
       if (
         kind === "algebraic" &&
-        /(d_upright|\\mathrm\{d\}|\bdy\/dx\b|\bd\^?\{?2\}?\s*y\s*\/\s*dx\^?\{?2\}?)/.test(expr)
+        rx.REGEX_CALCULUS_EXPR.test(expr)
       ) {
         kind = "calculus";
       }
 
       if (kind === "slider") {
-        const match = expr.trim().match(/^([a-wA-W])\s*=\s*(-?\d+(?:\.\d+)?)$/);
+        const match = expr.trim().match(rx.REGEX_SLIDER_MATCH);
         const value = match ? Number(match[2]) : 0;
         update(id, {
           latex,
@@ -69,7 +70,7 @@ export function useUpdateExpression() {
         });
       } else if (kind === "points") {
         const pairs: [number, number][] = [];
-        const regex = /\(\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)/g;
+        const regex = rx.REGEX_POINT_PAIR_MATCH_LOOSE;
         let m: RegExpExecArray | null;
         while ((m = regex.exec(expr)) !== null) {
           pairs.push([Number(m[1]), Number(m[2])]);

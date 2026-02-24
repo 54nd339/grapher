@@ -2,6 +2,7 @@
 
 import { latexToExpr } from "@/lib/latex";
 import { isLeibnizDerivativeLatex } from "@/lib/math";
+import * as rx from "@/lib/math/regex";
 import type { Expression } from "@/types";
 
 import { AlgebraicPlot, PiecewisePlot } from "./algebraic-plot";
@@ -53,7 +54,7 @@ export function ExpressionPlot({ expression }: { expression: Expression }) {
       if (isLeibnizDerivativeLatex(expression.latex)) {
         return <CalculusPlot expression={expression} />;
       }
-      const raw = latexToExpr(expression.latex).replace(/^y\s*=\s*/, "");
+      const raw = latexToExpr(expression.latex).replace(rx.REGEX_Y_EQ_PREFIX, "");
       if (raw.includes("{") && raw.includes(",")) {
         return <PiecewisePlot expression={expression} />;
       }

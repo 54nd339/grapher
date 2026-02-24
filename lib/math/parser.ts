@@ -1,5 +1,6 @@
 import { getCE } from "@/lib/latex";
 import type { ExpressionKind } from "@/types";
+import * as rx from "./regex";
 
 /**
  * Detect expression kind by inspecting variable usage and structure.
@@ -14,57 +15,57 @@ export function detectExpressionKind(expr: string): ExpressionKind {
   if (!trimmed) return "algebraic";
 
   // Slider: single letter = numeric literal (e.g. "a = 3", "b = -1.5")
-  if (/^[a-wA-W]\s*=\s*-?\d+(\.\d+)?$/.test(trimmed)) {
+  if (rx.REGEX_SLIDER.test(trimmed)) {
     return "slider";
   }
 
-  if (/^\s*\(\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*\)\s*(,\s*\(\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*\)\s*)*$/.test(trimmed)) {
+  if (rx.REGEX_POINTS.test(trimmed)) {
     return "points";
   }
 
   // Inequality: includes both axis inequalities and general forms like x^2+y^2<4
-  if (/<=|>=|<|>/.test(trimmed) && !/!=/.test(trimmed)) {
+  if (rx.REGEX_INEQUALITY.test(trimmed) && !rx.REGEX_INEQUALITY_STRICT.test(trimmed)) {
     return "inequality";
   }
 
   // Second-order differential: y'', d²y/dx², etc.
-  if (/y''|d\^?2y\/dx\^?2|\\frac\{d\^?\{?2\}?y\}\{dx\^?\{?2\}?\}/.test(trimmed)) {
+  if (rx.REGEX_DIFFERENTIAL_SECOND_ORDER.test(trimmed)) {
     return "differential";
   }
 
   // First-order differential: dy/dx, y', or \frac{dy}{dx} notation
-  if (/dy\/dx|y'|\\frac\{dy\}\{dx\}/.test(trimmed)) {
+  if (rx.REGEX_DIFFERENTIAL_FIRST_ORDER.test(trimmed)) {
     return "differential";
   }
 
   // Calculus: derivative/diff functions or integral notation
-  if (/\bderivative\(|\bdiff\(|\\int|^int\(/.test(trimmed)) {
+  if (rx.REGEX_CALCULUS.test(trimmed)) {
     return "calculus";
   }
 
   // Series: sum or product notation (LaTeX or functional)
-  if (/\\sum|\\Sigma|\bsum\(|\\prod|\bprod\(/.test(trimmed)) {
+  if (rx.REGEX_SERIES.test(trimmed)) {
     return "series";
   }
 
   // Parametric: contains x(t)/y(t), or comma-separated pair that references t
-  if (/\(t\)/.test(trimmed) || (/^[^=]*,[^=]*$/.test(trimmed) && /\bt\b/.test(trimmed))) {
+  if (rx.REGEX_PARAMETRIC_T_FUNC.test(trimmed) || (rx.REGEX_PARAMETRIC_COMMA.test(trimmed) && rx.REGEX_PARAMETRIC_T_VAR.test(trimmed))) {
     return "parametric";
   }
 
   // Polar: must start with r= or r(theta) -- not just any expression with theta
   // Prevents false positive on "y = sin(theta)" which should be algebraic
-  if (/^r\s*[=(]/.test(trimmed)) {
+  if (rx.REGEX_POLAR.test(trimmed)) {
     return "polar";
   }
 
   // Implicit: equation not in y=f(x) form.
   // Catches both multi-variable curves (x²+y²=1) and vertical lines (x=4).
-  if (/=/.test(trimmed) && !/^y\s*=/.test(trimmed)) {
+  if (rx.REGEX_EQUALITY.test(trimmed) && !rx.REGEX_Y_EQUALS.test(trimmed)) {
     const lhs = trimmed.split("=")[0];
     if (
-      (/[xy]/.test(lhs) && /x/.test(trimmed) && /y/.test(trimmed)) ||
-      /^\s*x\s*$/.test(lhs)
+      (rx.REGEX_VARIABLE_XY.test(lhs) && rx.REGEX_VARIABLE_X.test(trimmed) && rx.REGEX_VARIABLE_Y.test(trimmed)) ||
+      rx.REGEX_ONLY_X.test(lhs)
     ) {
       return "implicit";
     }
@@ -72,8 +73,7 @@ export function detectExpressionKind(expr: string): ExpressionKind {
 
   // Trigonometric: primary trig function as the main operation
   // Matches both "y = sin(x)" and bare "sin(x)" without y= prefix
-  const trigFns = /\b(sin|cos|tan|csc|sec|cot|asin|acos|atan|sinh|cosh|tanh)\b/;
-  if (trigFns.test(trimmed)) {
+  if (rx.REGEX_TRIG_FUNCS.test(trimmed)) {
     return "trigonometric";
   }
 
@@ -88,7 +88,7 @@ export function detectExpressionKind(expr: string): ExpressionKind {
 export function tryParse(expr: string): { valid: boolean; error?: string } {
   if (!expr.trim()) return { valid: true };
   // Skip validation for expressions handled by custom graph renderers
-  if (/^(int|sum|prod|diff|derivative|abs|nthRoot)\(/.test(expr)) {
+  if (rx.REGEX_CUSTOM_RENDER_FUNCS.test(expr)) {
     return { valid: true };
   }
   try {
@@ -112,6 +112,5 @@ export function tryParse(expr: string): { valid: boolean; error?: string } {
  * Matches `\frac`, `\dfrac`, `\tfrac` and handles MathLive's `\mathrm{d}` or `d_upright`.
  */
 export function isLeibnizDerivativeLatex(latex: string): boolean {
-  return /(?:\\frac|\\dfrac|\\tfrac)\{(?:\\mathrm\{d\}|d)\^?\{?\d*\}?\}\{(?:\\mathrm\{d\}|d)\s*[a-zA-Z]\^?\{?\d*\}?\}/.test(latex)
-    || /d_upright/.test(latex);
+  return rx.REGEX_LEIBNIZ_LATEX.test(latex) || rx.REGEX_D_UPRIGHT.test(latex);
 }

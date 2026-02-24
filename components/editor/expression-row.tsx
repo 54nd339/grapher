@@ -12,6 +12,7 @@ import { latexToExpr } from "@/lib/latex";
 import { tryParse } from "@/lib/math";
 import { useExpressionStore } from "@/stores";
 import { useUpdateExpression, useDuplicateExpression, useRemoveExpression } from "@/hooks";
+import * as rx from "@/lib/math/regex";
 import type { Expression } from "@/types";
 
 import { ColorPicker } from "./color-picker";
@@ -54,7 +55,7 @@ export function ExpressionRow({ expression }: ExpressionRowProps) {
   const parseResult = useMemo(() => {
     if (!expression.latex) return { valid: true };
     const plain = latexToExpr(expression.latex);
-    const cleaned = plain.replace(/^y\s*=\s*/, "");
+    const cleaned = plain.replace(rx.REGEX_Y_EQ_PREFIX, "");
     return tryParse(cleaned);
   }, [expression.latex]);
 

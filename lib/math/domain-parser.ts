@@ -2,20 +2,20 @@
  * Parse optional domain restriction from expression.
  * Supports "x^2 {x > 0}" syntax -- returns NaN outside the domain.
  */
+import * as rx from "@/lib/math/regex";
+
 export function parseDomainRestriction(expr: string): {
   fn: string;
   condition: ((x: number) => boolean) | null;
 } {
-  const match = expr.match(/^(.+?)\s*\{(.+)\}\s*$/);
+  const match = expr.match(rx.REGEX_DOMAIN_SPLIT);
   if (!match) return { fn: expr, condition: null };
 
   const fn = match[1].trim();
   const cond = match[2].trim();
 
   // Parse compound condition like "a < x < b"
-  const rangeMatch = cond.match(
-    /^(-?\d+(?:\.\d+)?)\s*(<|<=)\s*x\s*(<|<=)\s*(-?\d+(?:\.\d+)?)$/,
-  );
+  const rangeMatch = cond.match(rx.REGEX_DOMAIN_COMPOUND_CONDITION);
   if (rangeMatch) {
     const lo = Number(rangeMatch[1]);
     const loStrict = rangeMatch[2] === "<";
@@ -29,7 +29,7 @@ export function parseDomainRestriction(expr: string): {
   }
 
   // Parse simple condition like "x > 0", "x <= 5"
-  const simpleMatch = cond.match(/^x\s*(>=?|<=?|!=)\s*(-?\d+(?:\.\d+)?)$/);
+  const simpleMatch = cond.match(rx.REGEX_DOMAIN_SIMPLE_CONDITION);
   if (simpleMatch) {
     const op = simpleMatch[1];
     const val = Number(simpleMatch[2]);

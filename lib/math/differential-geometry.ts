@@ -1,5 +1,5 @@
 import type { EvalFn } from "./ce-compile";
-import { safeEval } from "./safe-eval";
+import { safeEval } from "./ce-compile";
 
 
 /**

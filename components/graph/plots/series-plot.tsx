@@ -5,6 +5,7 @@ import { Plot } from "mafs";
 
 import { latexToExpr } from "@/lib/latex";
 import { evaluateSeriesPartialSum, evaluateSeriesPartialProd, safeEval } from "@/lib/math";
+import * as rx from "@/lib/math/regex";
 import { useCompiledFn, useCompiledFromLatex, useSliderScope } from "@/hooks";
 import type { Expression } from "@/types";
 
@@ -17,7 +18,7 @@ export const SeriesPlot = memo(function SeriesPlot({ expression }: { expression:
   const raw = latexToExpr(expression.latex);
   const scope = useSliderScope();
 
-  const sumMatch = raw.match(/^sum\((.+),\s*(\w+),\s*([^,]+),\s*([^)]+)\)$/);
+  const sumMatch = raw.match(rx.REGEX_SERIES_SUM);
   if (sumMatch) {
     return (
       <SumPlot
@@ -31,7 +32,7 @@ export const SeriesPlot = memo(function SeriesPlot({ expression }: { expression:
     );
   }
 
-  const prodMatch = raw.match(/^prod\((.+),\s*(\w+),\s*([^,]+),\s*([^)]+)\)$/);
+  const prodMatch = raw.match(rx.REGEX_SERIES_PROD);
   if (prodMatch) {
     return (
       <ProdPlot

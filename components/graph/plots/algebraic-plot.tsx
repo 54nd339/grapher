@@ -5,25 +5,26 @@ import { Plot } from "mafs";
 
 import { latexToExpr } from "@/lib/latex";
 import { parseDomainRestriction, safeEval, safeCompile } from "@/lib/math";
+import * as rx from "@/lib/math/regex";
 import { useCompiledFn, useCompiledFromLatex, useCompiledWithFuncs, useSliderScope } from "@/hooks";
 import type { Expression } from "@/types";
 
 export const AlgebraicPlot = memo(function AlgebraicPlot({ expression }: { expression: Expression }) {
   const latexForCompile = useMemo(() => {
-    const match = expression.latex.match(/^\s*[a-hj-wA-HJ-W]\s*(?:\\left|\\mleft)?\(.*\)\s*=\s*(.+)$/);
+    const match = expression.latex.match(rx.REGEX_ALGEBRAIC_FUNC_DEF_FULL);
     return match ? match[1].trim() : expression.latex;
   }, [expression.latex]);
 
   const rawExpr = useMemo(() => latexToExpr(expression.latex), [expression.latex]);
   const raw = useMemo(() => {
-    if (/^[a-hj-wA-HJ-W]\s*\([^)]*\)\s*=/.test(rawExpr)) {
-      return rawExpr.replace(/^[a-hj-wA-HJ-W]\s*\([^)]*\)\s*=\s*/, "");
+    if (rx.REGEX_PLOT_NON_Y_FUNC_DEF.test(rawExpr)) {
+      return rawExpr.replace(rx.REGEX_ALGEBRAIC_FUNC_DEF_PREFIX, "");
     }
-    return rawExpr.replace(/^y\s*=\s*/, "");
+    return rawExpr.replace(rx.REGEX_Y_EQ_PREFIX, "");
   }, [rawExpr]);
   const { fn, condition } = useMemo(() => parseDomainRestriction(raw), [raw]);
   const hasUserFunctionCall = useMemo(
-    () => /\b[a-hj-wA-HJ-W]\s*\(/.test(raw),
+    () => rx.REGEX_PLOT_FUNC_CALL.test(raw),
     [raw],
   );
   const fromFuncs = useCompiledWithFuncs(latexForCompile, hasUserFunctionCall);
@@ -48,7 +49,7 @@ export const AlgebraicPlot = memo(function AlgebraicPlot({ expression }: { expre
 }, expressionEqual);
 
 export const PiecewisePlot = memo(function PiecewisePlot({ expression }: { expression: Expression }) {
-  const raw = latexToExpr(expression.latex).replace(/^y\s*=\s*/, "");
+  const raw = latexToExpr(expression.latex).replace(rx.REGEX_Y_EQ_PREFIX, "");
   const scope = useSliderScope();
 
   const segments = useMemo(() => {

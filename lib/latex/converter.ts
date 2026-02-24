@@ -9,6 +9,7 @@
  */
 
 import { ComputeEngine, type MathJsonExpression } from "@cortex-js/compute-engine";
+import * as rx from "@/lib/math/regex";
 
 let _ce: ComputeEngine | null = null;
 export function getCE(): ComputeEngine {
@@ -75,7 +76,7 @@ function functionHeadToExpr(head: MathJsonExpression): string | null {
 }
 
 function splitBoundVariable(bound: string, defaultVariable: string): { variable: string; value: string } {
-  const match = bound.trim().match(/^([a-zA-Z][a-zA-Z0-9_]*)\s*=\s*(.+)$/);
+  const match = bound.trim().match(rx.REGEX_LATEX_BOUND_VAR);
   if (!match) return { variable: defaultVariable, value: bound.trim() };
   return { variable: match[1].trim(), value: match[2].trim() };
 }
@@ -250,9 +251,9 @@ function normalizePlainSqrt(input: string): string {
 
   while (index < input.length) {
     const tail = input.slice(index);
-    const match = /^sqrt\s*\(/.exec(tail);
+    const match = rx.REGEX_SQRT_PREFIX_P.exec(tail);
     const prevChar = index > 0 ? input[index - 1] : "";
-    const isWordBoundary = !/[a-zA-Z0-9_\\]/.test(prevChar);
+    const isWordBoundary = !rx.REGEX_WORD_BOUNDARY.test(prevChar);
 
     if (!match || !isWordBoundary) {
       output += input[index];
@@ -290,15 +291,15 @@ function normalizePlainSqrt(input: string): string {
 export function normalizeLatexInput(latex: string): string {
   return normalizePlainSqrt(
     latex
-      .replace(/\\dfrac/g, "\\frac")
-      .replace(/\\tfrac/g, "\\frac")
-      .replace(/\\frac\s*([A-Za-z0-9])\s*([A-Za-z0-9])/g, "\\frac{$1}{$2}")
-      .replace(/\\neq/g, "\\ne")
-      .replace(/\\abs\s*\(/g, "abs(")
-      .replace(/\\abs\{([^{}]+)\}/g, "abs($1)")
+      .replace(rx.REGEX_DFRAC, "\\frac")
+      .replace(rx.REGEX_TFRAC, "\\frac")
+      .replace(rx.REGEX_FRAC_MANGLED, "\\frac{$1}{$2}")
+      .replace(rx.REGEX_NEQ, "\\ne")
+      .replace(rx.REGEX_ABS_PAREN, "abs(")
+      .replace(rx.REGEX_ABS_BRACE, "abs($1)")
       // MathLive emits \mathrm{d} for derivative notation — CE needs bare d
-      .replace(/\\mathrm\{d\}/g, "d")
-      .replace(/d_upright/g, "d"),
+      .replace(rx.REGEX_MATHRM_D, "d")
+      .replace(rx.REGEX_D_UPRIGHT_GLOBAL, "d"),
   );
 }
 
@@ -320,7 +321,7 @@ export function latexToExpr(latex: string): string {
 
   // CE drops bounds for forms like \sum_2^{100} n (without explicit index variable).
   // Preserve bounds via direct LaTeX fallback before CE parse.
-  const sumNoIndex = normalized.match(/^\\sum_\{?([^{}]+)\}?\^\{?([^{}]+)\}?\s*(.+)$/);
+  const sumNoIndex = normalized.match(rx.REGEX_SUM_NO_INDEX);
   if (sumNoIndex) {
     const [, lower, upper, body] = sumNoIndex;
     const { variable, value: lowerExpr } = splitBoundVariable(lower, "n");
@@ -328,7 +329,7 @@ export function latexToExpr(latex: string): string {
     return `sum(${bodyExpr}, ${variable}, ${parsePart(lowerExpr)}, ${parsePart(upper)})`;
   }
 
-  const prodNoIndex = normalized.match(/^\\prod_\{?([^{}]+)\}?\^\{?([^{}]+)\}?\s*(.+)$/);
+  const prodNoIndex = normalized.match(rx.REGEX_PROD_NO_INDEX);
   if (prodNoIndex) {
     const [, lower, upper, body] = prodNoIndex;
     const { variable, value: lowerExpr } = splitBoundVariable(lower, "n");

@@ -5,7 +5,6 @@ import { Download, RotateCcw } from "lucide-react";
 import { Mafs, Coordinates, usePaneContext, useTransformContext } from "mafs";
 import { useShallow } from "zustand/react/shallow";
 
-import { niceStep } from "@/lib/graph";
 import { useExpressionStore, useGraphStore } from "@/stores";
 import { useSliderScope } from "@/hooks";
 
@@ -67,6 +66,21 @@ function TransformSync({
 }
 
 /* ── Adaptive grid with built-in Mafs labels ──────────── */
+
+/**
+ * Compute a "nice" step size for axis ticks.
+ * Picks from {1, 2, 5} × 10^n to avoid awkward tick spacing.
+ */
+export function niceStep(range: number, maxTicks: number): number {
+  if (range <= 0 || !isFinite(range)) return 1;
+  const rough = range / maxTicks;
+  const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+  const r = rough / mag;
+  if (r <= 1.5) return mag;
+  if (r <= 3) return 2 * mag;
+  if (r <= 7) return 5 * mag;
+  return 10 * mag;
+}
 
 function DynamicGrid() {
   const { xPaneRange, yPaneRange } = usePaneContext();

@@ -7,13 +7,14 @@ import { latexToExpr, getCE } from "@/lib/latex";
 import { ceCompileFromLatex, type EvalFn, safeEval, simpsonIntegrate } from "@/lib/math";
 import { useCompiledFn, useCompiledFromLatex, useSliderScope } from "@/hooks";
 import { useGraphStore } from "@/stores";
+import * as rx from "@/lib/math/regex";
 import type { Expression } from "@/types";
 
 export const CalculusPlot = memo(function CalculusPlot({ expression }: { expression: Expression }) {
   const raw = latexToExpr(expression.latex);
 
   // 4-arg format: int(body, var, lower, upper)
-  const intMatch4 = raw.match(/^int\((.+),\s*(\w+),\s*([^,]+),\s*([^)]+)\)$/);
+  const intMatch4 = raw.match(rx.REGEX_SOLVER_INT_4);
   if (intMatch4) {
     const [, body, integVar, lowerStr, upperStr] = intMatch4;
     const lowerNum = Number(lowerStr.trim());
@@ -38,7 +39,7 @@ export const CalculusPlot = memo(function CalculusPlot({ expression }: { express
   }
 
   // Legacy 3-arg format: int(body, lower, upper)
-  const intMatch3 = raw.match(/^int\((.+),\s*([^,]+),\s*([^)]+)\)$/);
+  const intMatch3 = raw.match(rx.REGEX_SOLVER_INT_3);
   if (intMatch3) {
     return (
       <IntegralPlot
@@ -51,7 +52,7 @@ export const CalculusPlot = memo(function CalculusPlot({ expression }: { express
   }
 
   // Detect derivative: diff(expr, x) or derivative(expr)
-  const diffMatch = raw.match(/^(?:diff|derivative)\((.+?)(?:,\s*\w+)?\)$/);
+  const diffMatch = raw.match(rx.REGEX_SOLVER_DIFF);
   if (diffMatch) {
     return <DerivativePlot body={diffMatch[1]} color={expression.color} />;
   }

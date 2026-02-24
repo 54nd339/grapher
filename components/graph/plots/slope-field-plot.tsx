@@ -5,6 +5,7 @@ import { Plot, type vec } from "mafs";
 
 import { latexToExpr } from "@/lib/latex";
 import { safeEval, ceCompile, ceCompileFromLatex } from "@/lib/math";
+import * as rx from "@/lib/math/regex";
 import { useGraphStore } from "@/stores";
 import { useCompiledFromLatex, useSliderScope } from "@/hooks";
 import { getMathWorker } from "@/workers/math-api";
@@ -18,14 +19,14 @@ export const SlopeFieldPlot = memo(function SlopeFieldPlot({ expression }: { exp
   // Determine the ODE type and compile the RHS
   const odeData = useMemo(() => {
     // Second-order: y'' = f(x, y, y')
-    const secondOrderMatch = raw.match(/^(?:y''|d\^?2y\/dx\^?2)\s*=\s*(.+)$/);
+    const secondOrderMatch = raw.match(rx.REGEX_ODE_SECOND_ORDER);
     if (secondOrderMatch) {
       const rhs = secondOrderMatch[1].trim();
       return { type: "second-order" as const, rawExpr: rhs, isImplicit: false, fn: null };
     }
 
     // Explicit first-order: y' = f(x,y) or dy/dx = f(x,y)
-    const explicitMatch = raw.match(/^(dy\/dx|y')\s*=\s*(.+)$/);
+    const explicitMatch = raw.match(rx.REGEX_ODE_FIRST_ORDER);
     if (explicitMatch) {
       const rhs = explicitMatch[2].trim();
       const fn = ceCompileFromLatex(rhs) ?? ceCompile(rhs);
@@ -33,7 +34,7 @@ export const SlopeFieldPlot = memo(function SlopeFieldPlot({ expression }: { exp
     }
 
     // Implicit first-order: F(x, y, y') = 0
-    if (/y'/.test(raw)) {
+    if (rx.REGEX_ODE_IMPLICIT.test(raw)) {
       return { type: "implicit" as const, rawExpr: raw, isImplicit: true, fn: null };
     }
 
@@ -42,7 +43,7 @@ export const SlopeFieldPlot = memo(function SlopeFieldPlot({ expression }: { exp
 
   // First-order explicit: extract RHS LaTeX for slope field rendering
   const explicitRhsLatex = useMemo(() => {
-    const match = expression.latex.match(/=\s*(.+)$/);
+    const match = expression.latex.match(rx.REGEX_RHS_ONLY);
     return match ? match[1].trim() : "";
   }, [expression.latex]);
   const compiledExplicit = useCompiledFromLatex(explicitRhsLatex);

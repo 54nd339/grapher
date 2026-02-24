@@ -5,6 +5,7 @@ import { Plot, Polygon, type vec } from "mafs";
 
 import { latexToExpr } from "@/lib/latex";
 import { ceCompileFromLatex, safeCompile, safeEval } from "@/lib/math";
+import * as rx from "@/lib/math/regex";
 import { useGraphStore } from "@/stores";
 import { useSliderScope } from "@/hooks";
 import type { Expression } from "@/types";
@@ -15,7 +16,7 @@ export const InequalityPlot = memo(function InequalityPlot({ expression }: { exp
   const viewport = useGraphStore((s) => s.viewport);
 
   const circleIneq = useMemo(() => {
-    const inside = raw.match(/^x\^\(2\)\s*\+\s*y\^\(2\)\s*(<=|<)\s*(-?\d+(?:\.\d+)?)$/);
+    const inside = raw.match(rx.REGEX_INEQ_CIRCLE_INSIDE);
     if (inside) {
       const op = inside[1];
       const rhs = Number(inside[2]);
@@ -25,7 +26,7 @@ export const InequalityPlot = memo(function InequalityPlot({ expression }: { exp
       return { mode: "inside" as const, strict: op === "<", upper, lower };
     }
 
-    const outside = raw.match(/^x\^\(2\)\s*\+\s*y\^\(2\)\s*(>=|>)\s*(-?\d+(?:\.\d+)?)$/);
+    const outside = raw.match(rx.REGEX_INEQ_CIRCLE_OUTSIDE);
     if (outside) {
       const op = outside[1];
       const rhs = Number(outside[2]);
@@ -40,7 +41,7 @@ export const InequalityPlot = memo(function InequalityPlot({ expression }: { exp
 
   const parsed = useMemo(() => {
     // x-axis inequality: x > expr, x < expr, etc.
-    const xMatch = raw.match(/^x\s*(>=?|<=?)\s*(.+)$/);
+    const xMatch = raw.match(rx.REGEX_INEQ_X_AXIS);
     if (xMatch) {
       const op = xMatch[1];
       const rhs = xMatch[2];
@@ -52,7 +53,7 @@ export const InequalityPlot = memo(function InequalityPlot({ expression }: { exp
     }
 
     // y-axis inequality: y > f(x), y < f(x), etc.
-    const yMatch = raw.match(/^y\s*(>=?|<=?)\s*(.+)$/);
+    const yMatch = raw.match(rx.REGEX_INEQ_Y_AXIS);
     if (yMatch) {
       const op = yMatch[1];
       const rhs = yMatch[2];

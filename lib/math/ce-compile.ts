@@ -9,8 +9,9 @@
 import { compile as ceCompileExpr, type Expression } from "@cortex-js/compute-engine";
 
 import { getCE, normalizeLatexInput } from "@/lib/latex";
-import { expandFunctionRefs, getRegistryVersion, parseFuncDef } from "@/lib/math/function-registry";
-import { extractIntegrals, syncSimpsonIntegrate } from "@/lib/math/ce-compile-integrate";
+import { expandFunctionRefs, getRegistryVersion, parseFuncDef } from "./function-registry";
+import { extractIntegrals, syncSimpsonIntegrate } from "./ce-compile-integrate";
+import * as rx from "./regex";
 
 export type EvalFn = (scope: Record<string, number>) => number;
 
@@ -138,8 +139,7 @@ export function ceCompile(expr: string): EvalFn | null {
 export const safeCompile = ceCompile;
 
 // Matches higher-order Leibniz notation CE can't parse directly
-const LEIBNIZ_RE =
-  /^\\frac\{(?:\\mathrm\{d\}|d)\^?\{?(\d+)?\}?\}\{(?:\\mathrm\{d\}|d)\s*(\w)\^?\{?\d*\}?\}(.+)$/;
+const LEIBNIZ_RE = rx.REGEX_LEIBNIZ_CE;
 
 /**
  * Compile LaTeX directly to a JS evaluation function.
@@ -154,7 +154,7 @@ export function ceCompileFromLatex(latex: string): EvalFn | null {
 
     // Strip "y=" or "f(x)=" prefix from LaTeX before regex matching,
     // otherwise the ^ anchor in LEIBNIZ_RE fails.
-    const withoutPrefix = normalized.replace(/^(?:[a-zA-Z]\s*(?:\\left|\\mleft)?\s*\(\s*[a-zA-Z]\s*(?:\\right|\\mright)?\s*\)|[a-zA-Z])\s*=\s*/, "");
+    const withoutPrefix = normalized.replace(rx.REGEX_LATEX_PREFIX, "");
 
     // Higher-order Leibniz: d^n/dx^n f(x)
     const leibniz = LEIBNIZ_RE.exec(withoutPrefix);
@@ -273,4 +273,20 @@ export function ceCompileFromLatexWithFuncs(latex: string): EvalFn | null {
     type BoxArg = Parameters<typeof ce.box>[0];
     return ce.box(json as BoxArg);
   });
+}
+
+/**
+ * Safely evaluate a compiled function, returning NaN on error or non-finite result.
+ * This pattern was duplicated ~12 times across plot components.
+ */
+export function safeEval(
+  fn: EvalFn,
+  scope: Record<string, number>,
+): number {
+  try {
+    const r = fn(scope);
+    return typeof r === "number" && isFinite(r) ? r : NaN;
+  } catch {
+    return NaN;
+  }
 }

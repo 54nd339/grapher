@@ -3,6 +3,12 @@ import {
   ceCompile,
   descriptiveStats,
   findZeros,
+  numericalLimit,
+  solveODEText,
+  taylorExpansion,
+  simpsonIntegrate,
+} from "@/lib/math";
+import {
   matrixDeterminant,
   matrixEigenvalues,
   matrixArithmetic,
@@ -11,17 +17,15 @@ import {
   matrixRank,
   matrixTrace,
   matrixTranspose,
-  numericalLimit,
   solveLinearSystem,
-  solveODEText,
-  taylorExpansion,
   vectorArithmetic,
   vectorCross,
   vectorDot,
   vectorEvaluate,
   vectorNorm,
-  simpsonIntegrate,
-} from "@/lib/math";
+} from "./linear-algebra";
+import * as rx from "@/lib/math/regex";
+import { toPlainExpression } from "./expression-resolution";
 import type { SolverResult, SolverCategory } from "@/types";
 
 /* ── Error hint messages per category ────────────────── */
@@ -230,16 +234,16 @@ async function solveTrigonometry(input: string): Promise<SolverResult> {
 /* ── Calculus ────────────────────────────────────────── */
 
 // 4-arg definite integral: int(body, variable, lower, upper)
-const INT_4_ARG = /^int\((.+),\s*([a-zA-Z]),\s*([^,]+),\s*([^)]+)\)$/;
+const INT_4_ARG = rx.REGEX_SOLVER_INT_4;
 // 3-arg definite integral (no explicit variable, assume x): int(body, lower, upper)
-const INT_3_ARG = /^int\((.+),\s*([^,]+),\s*([^)]+)\)$/;
+const INT_3_ARG = rx.REGEX_SOLVER_INT_3;
 // 2-arg indefinite: int(body, variable)
-const INT_2_ARG = /^int\((.+),\s*([a-zA-Z])\)$/;
+const INT_2_ARG = rx.REGEX_SOLVER_INT_2;
 // 1-arg indefinite (assume x): int(body)
-const INT_1_ARG = /^int\((.+)\)$/;
+const INT_1_ARG = rx.REGEX_SOLVER_INT_1;
 // integrate(...) form
-const INTEGRATE_PAREN = /^integrate\s*\((.+)\)$/;
-const INTEGRATE_BARE = /^integrate\s+(.+)$/;
+const INTEGRATE_PAREN = rx.REGEX_SOLVER_INTEGRATE_PAREN;
+const INTEGRATE_BARE = rx.REGEX_SOLVER_INTEGRATE_BARE;
 
 /**
  * Numerical definite integral via worker-based composite Simpson's rule.
@@ -348,7 +352,7 @@ async function solveCalculus(input: string): Promise<SolverResult> {
   const ce = getCE();
 
   // Taylor series: taylor(expr, x, center, order)
-  const taylorMatch = input.match(/^taylor\((.+),\s*(\w+),\s*([^,]+),\s*(\d+)\)$/);
+  const taylorMatch = input.match(rx.REGEX_SOLVER_TAYLOR);
   if (taylorMatch) {
     const [, expr, variable, centerStr, orderStr] = taylorMatch;
     const center = Number(centerStr);
@@ -368,7 +372,7 @@ async function solveCalculus(input: string): Promise<SolverResult> {
   }
 
   // Limit: lim(expr, x, value)
-  const limMatch = input.match(/^lim\((.+),\s*(\w+),\s*([^)]+)\)$/);
+  const limMatch = input.match(rx.REGEX_SOLVER_LIMIT);
   if (limMatch) {
     const [, expr, variable, valueStr] = limMatch;
     const approach = Number(valueStr);
@@ -419,7 +423,7 @@ async function solveCalculus(input: string): Promise<SolverResult> {
   }
 
   // ── Differentiation ───────────────────────────────
-  const diffMatch = input.match(/^(?:diff|derivative)\((.+?)(?:,\s*(\w+))?\)$/);
+  const diffMatch = input.match(rx.REGEX_SOLVER_DIFF);
   if (diffMatch) {
     const exprStr = diffMatch[1];
     const variable = diffMatch[2] || "x";
@@ -480,11 +484,11 @@ function stripWrappingParens(value: string): string {
 function normalizeMatrixInput(rawInput: string): { normalized: string; unknownOperation: string | null } {
   const compact = rawInput.trim().replace(/\s+/g, "");
 
-  if (/^\*\[\[.+\]\]$/.test(compact)) {
+  if (rx.REGEX_SOLVER_MATRIX_LITERAL_MANGLED.test(compact)) {
     return { normalized: compact, unknownOperation: "<missing>" };
   }
 
-  const opMatrixMatch = compact.match(/^([a-zA-Z][a-zA-Z*]*)\*(.+)$/);
+  const opMatrixMatch = compact.match(rx.REGEX_SOLVER_OP_MATRIX_VECTOR);
   if (!opMatrixMatch) {
     return { normalized: compact, unknownOperation: null };
   }
@@ -518,7 +522,7 @@ async function solveMatrix(input: string): Promise<SolverResult> {
       );
     }
 
-    const detMatch = normalized.match(/^det\((.+)\)$/i);
+    const detMatch = normalized.match(rx.REGEX_SOLVER_MATRIX_DET);
     if (detMatch) {
       const output = await matrixDeterminant(detMatch[1]);
       if (output.startsWith("Error:")) throw new Error(output);
@@ -529,7 +533,7 @@ async function solveMatrix(input: string): Promise<SolverResult> {
       ]);
     }
 
-    const invMatch = normalized.match(/^inv\((.+)\)$/i);
+    const invMatch = normalized.match(rx.REGEX_SOLVER_MATRIX_INV);
     if (invMatch) {
       const output = await matrixInverse(invMatch[1]);
       if (output.startsWith("Error:")) throw new Error(output);
@@ -540,7 +544,7 @@ async function solveMatrix(input: string): Promise<SolverResult> {
       ]);
     }
 
-    const eigsMatch = normalized.match(/^eigs\((.+)\)$/i);
+    const eigsMatch = normalized.match(rx.REGEX_SOLVER_MATRIX_EIGS);
     if (eigsMatch) {
       const output = await matrixEigenvalues(eigsMatch[1]);
       if (output.startsWith("Error:")) throw new Error(output);
@@ -551,7 +555,7 @@ async function solveMatrix(input: string): Promise<SolverResult> {
       ]);
     }
 
-    const transposeMatch = normalized.match(/^transpose\((.+)\)$/i);
+    const transposeMatch = normalized.match(rx.REGEX_SOLVER_MATRIX_TRANSPOSE);
     if (transposeMatch) {
       const output = await matrixTranspose(transposeMatch[1]);
       if (output.startsWith("Error:")) throw new Error(output);
@@ -562,7 +566,7 @@ async function solveMatrix(input: string): Promise<SolverResult> {
       ]);
     }
 
-    const traceMatch = normalized.match(/^trace\((.+)\)$/i);
+    const traceMatch = normalized.match(rx.REGEX_SOLVER_MATRIX_TRACE);
     if (traceMatch) {
       const output = await matrixTrace(traceMatch[1]);
       if (output.startsWith("Error:")) throw new Error(output);
@@ -573,7 +577,7 @@ async function solveMatrix(input: string): Promise<SolverResult> {
       ]);
     }
 
-    const rankMatch = normalized.match(/^rank\((.+)\)$/i);
+    const rankMatch = normalized.match(rx.REGEX_SOLVER_MATRIX_RANK);
     if (rankMatch) {
       const output = await matrixRank(rankMatch[1]);
       if (output.startsWith("Error:")) throw new Error(output);
@@ -623,7 +627,7 @@ const VECTOR_OP_SET = new Set<string>(VECTOR_OPS);
 function normalizeVectorInput(rawInput: string): { normalized: string; unknownOperation: string | null } {
   const compact = rawInput.trim().replace(/\s+/g, "");
 
-  const opVectorMatch = compact.match(/^([a-zA-Z][a-zA-Z*]*)\*(.+)$/);
+  const opVectorMatch = compact.match(rx.REGEX_SOLVER_OP_MATRIX_VECTOR);
   if (!opVectorMatch) {
     return { normalized: compact, unknownOperation: null };
   }
@@ -652,7 +656,7 @@ async function solveVector(input: string): Promise<SolverResult> {
       );
     }
 
-    const crossMatch = normalized.match(/^cross\((.+)\)$/i);
+    const crossMatch = normalized.match(rx.REGEX_SOLVER_VECTOR_CROSS);
     if (crossMatch) {
       const args = splitTwoArgs(crossMatch[1]);
       if (!args) throw new Error("Expected two vector arguments");
@@ -665,7 +669,7 @@ async function solveVector(input: string): Promise<SolverResult> {
       ]);
     }
 
-    const dotMatch = normalized.match(/^dot\((.+)\)$/i);
+    const dotMatch = normalized.match(rx.REGEX_SOLVER_VECTOR_DOT);
     if (dotMatch) {
       const args = splitTwoArgs(dotMatch[1]);
       if (!args) throw new Error("Expected two vector arguments");
@@ -678,7 +682,7 @@ async function solveVector(input: string): Promise<SolverResult> {
       ]);
     }
 
-    const normMatch = normalized.match(/^norm\((.+)\)$/i);
+    const normMatch = normalized.match(rx.REGEX_SOLVER_VECTOR_NORM);
     if (normMatch) {
       const output = await vectorNorm(normMatch[1]);
       if (output.startsWith("Error:")) throw new Error(output);
@@ -759,4 +763,33 @@ export async function solve(
     default:
       return { input, output: "Unsupported category", error: true };
   }
+}
+
+/**
+ * Normalize and parse LaTeX input for the solver into a plain CE-compatible math string.
+ * Matrix commands (det, inv) wrap the matrix in operations.
+ */
+function recoverMatrixExprFromLatex(latex: string, expr: string): string {
+  if (!expr.startsWith("*[[")) return expr;
+
+  const matrixMatch = expr.match(/\[\[.*\]\]/);
+  if (!matrixMatch) return expr;
+
+  const lowerLatex = latex.toLowerCase();
+  const op = MATRIX_OPS.find((cmd) =>
+    lowerLatex.includes(cmd) || lowerLatex.includes(`\\${cmd}`) || lowerLatex.includes(`operatorname{${cmd}}`)
+  );
+
+  if (!op) return expr;
+  return `${op}(${matrixMatch[0]})`;
+}
+
+export function normalizeSolverInput(category: SolverCategory, latex: string): string {
+  const expr = toPlainExpression(latex, "none");
+
+  if (category === "matrices") {
+    return recoverMatrixExprFromLatex(latex, expr);
+  }
+
+  return expr;
 }

@@ -8,6 +8,7 @@ import { useTheme } from "next-themes";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
 import { getSliderSymbolFromLatex, toPlainExpression } from "@/lib/math";
+import * as rx from "@/lib/math/regex";
 import { useExpressionStore, useGraphStore } from "@/stores";
 
 import { AxisLabels, Curve3D, GPUSurface, ImplicitMarchingCubes3D, ScreenshotHelper } from "./graph-3d-renderers";
@@ -106,14 +107,14 @@ export function Graph3D() {
       }
 
       if (expression.kind === "implicit") {
-        return /=/.test(plain) && /z/.test(plain);
+        return rx.REGEX_3D_IMPLICIT.test(plain) && rx.REGEX_3D_HAS_Z.test(plain);
       }
 
       // 3D viewport currently supports explicit surfaces z = f(x, y)
       // (or bare expressions treated as z = expr) and 3D parametric curves.
       // Avoid compiling general equations here since it is expensive and can freeze.
-      if (/=/.test(plain)) {
-        return /^z\s*=/.test(plain);
+      if (rx.REGEX_3D_IMPLICIT.test(plain)) {
+        return rx.REGEX_3D_EXPLICIT_Z.test(plain);
       }
 
       return false;

@@ -5,6 +5,7 @@ import { Plot } from "mafs";
 
 import { latexToExpr } from "@/lib/latex";
 import { ceCompileFromLatex, safeEval } from "@/lib/math";
+import * as rx from "@/lib/math/regex";
 import { useCompiledFn, useSliderScope } from "@/hooks";
 import type { Expression } from "@/types";
 
@@ -76,13 +77,13 @@ export const ParametricPlot = memo(function ParametricPlot({ expression }: { exp
 }, expressionEqual);
 
 export const PolarPlot = memo(function PolarPlot({ expression }: { expression: Expression }) {
-  const fn = latexToExpr(expression.latex).replace(/^r\s*=\s*/, "");
+  const fn = latexToExpr(expression.latex).replace(rx.REGEX_POLAR_R_PREFIX_1, "");
   const scope = useSliderScope();
   const [tMin, tMax] = expression.paramRange ?? [0, 2 * Math.PI];
 
   // Primary: compile RHS directly from LaTeX (strip r= prefix)
   const polarLatex = useMemo(
-    () => expression.latex.replace(/^\\s*r\\s*=\\s*/, "").replace(/^r\s*=\s*/, ""),
+    () => expression.latex.replace(rx.REGEX_POLAR_R_PREFIX_2, "").replace(rx.REGEX_POLAR_R_PREFIX_1, ""),
     [expression.latex],
   );
   const fromLatex = useMemo(
@@ -119,4 +120,3 @@ function expressionEqual(a: { expression: Expression }, b: { expression: Express
     a.expression.paramRange?.[1] === b.expression.paramRange?.[1]
   );
 }
-

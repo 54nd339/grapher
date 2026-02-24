@@ -9,14 +9,10 @@
 import * as Comlink from "comlink";
 import { isoLines } from "marching-squares";
 
-import { ceCompile, ceCompileFromLatex, ceCompileImplicitFromLatex } from "@/lib/math/ce-compile";
-import { safeEval } from "@/lib/math/safe-eval";
-import { rk4, integrateWithOdex } from "@/lib/math/ode";
-import { secondOrderToSystem, rearrangeImplicitODE } from "@/lib/math/ode-rearrange";
+import { ceCompile, ceCompileFromLatex, ceCompileImplicitFromLatex, safeEval } from "@/lib/math/ce-compile";
+import { rk4, integrateWithOdex, secondOrderToSystem, rearrangeImplicitODE } from "@/lib/math/ode";
 import { IMPLICIT_VIEW_MIN, IMPLICIT_VIEW_MAX, IMPLICIT_TIME_BUDGET_MS } from "@/lib/constants";
 import type { PlotPoint } from "@/lib/math/types";
-
-/* ── types (mirrored from lib/math/types.ts) ────────── */
 
 export type PathRing = [number, number][];
 

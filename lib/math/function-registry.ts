@@ -1,4 +1,5 @@
 import { getCE, normalizeLatexInput } from "@/lib/latex";
+import * as rx from "./regex";
 
 /**
  * Registry for user-defined named functions like f(x) = x^2 + 2x.
@@ -14,7 +15,7 @@ interface FunctionDef {
   bodyJson: unknown;
 }
 
-const FUNC_NAME_RE = /^[a-hj-wA-HJ-W]$/;
+const FUNC_NAME_RE = rx.REGEX_FUNC_NAME;
 
 const registry = new Map<string, FunctionDef>();
 let version = 0;

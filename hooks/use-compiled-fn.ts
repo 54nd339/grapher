@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import { latexToExpr } from "@/lib/latex";
 import { ceCompile, ceCompileFromLatex, ceCompileFromLatexWithFuncs, type EvalFn, rebuildRegistry } from "@/lib/math";
+import * as rx from "@/lib/math/regex";
 import { useExpressionStore } from "@/stores";
 
 export function useCompiledFn(expr: string, enabled = true): EvalFn | null {
@@ -28,7 +29,7 @@ export function useCompiledWithFuncs(latex: string, enabled = true): EvalFn | nu
   const funcDefsKey = useMemo(() => {
     const keys: string[] = [];
     for (const e of expressions) {
-      if (e.latex && /^[a-hj-wA-HJ-W]\s*(?:\\left|\\mleft)?\s*\(/.test(e.latex.trim())) {
+      if (e.latex && rx.REGEX_FUNC_DEF_PREFIX.test(e.latex.trim())) {
         keys.push(e.latex);
       }
     }
@@ -53,7 +54,7 @@ export function useSliderScope(): Record<string, number> {
     const scope: Record<string, number> = {};
     for (const e of expressions) {
       if (e.kind === "slider" && e.sliderConfig) {
-        const match = latexToExpr(e.latex).trim().match(/^([a-wA-W])/);
+        const match = latexToExpr(e.latex).trim().match(rx.REGEX_SLIDER_VAR);
         if (match) scope[match[1]] = e.sliderConfig.value;
       }
     }

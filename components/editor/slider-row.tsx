@@ -8,6 +8,7 @@ import { useShallow } from "zustand/react/shallow";
 
 import { IconButton } from "@/components/ui";
 import { useExpressionStore } from "@/stores";
+import * as rx from "@/lib/math/regex";
 import type { Expression } from "@/types";
 
 interface SliderRowProps {
@@ -61,7 +62,7 @@ export function SliderRow({ expression }: SliderRowProps) {
   const rafRef = useRef<number>(0);
 
   const varName = expression.latex
-    ? expression.latex.trim().match(/^([a-wA-W])/)?.[1] ?? "a"
+    ? expression.latex.trim().match(rx.REGEX_SLIDER_VAR)?.[1] ?? "a"
     : "a";
 
   const [editingValue, setEditingValue] = useState(false);

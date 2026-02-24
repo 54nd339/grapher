@@ -21,7 +21,8 @@ import {
   type EvalFn,
 } from "./ce-compile";
 import { isLeibnizDerivativeLatex } from "./parser";
-import { safeEval } from "./safe-eval";
+import * as rx from "./regex";
+import { safeEval } from "./ce-compile";
 
 export type ExpressionMode = "none" | "graph-2d" | "graph-3d" | "auto";
 
@@ -125,7 +126,7 @@ export function compileExpressionLatex(
   //    the LEIBNIZ_RE handler. ceCompileFromLatexWithFuncs would let CE
   //    misparse d^n/dx^n as variable multiplication, returning a wrong result.
   const normalized = normalizeLatexInput(latex).trim();
-  const withoutPrefix = normalized.replace(/^(?:[a-zA-Z]\s*(?:\\left|\\mleft)?\s*\(\s*[a-zA-Z]\s*(?:\\right|\\mright)?\s*\)|[a-zA-Z])\s*=\s*/, "").trim();
+  const withoutPrefix = normalized.replace(rx.REGEX_LATEX_PREFIX, "").trim();
   const isLeibniz = isLeibnizDerivativeLatex(withoutPrefix);
 
   if (isLeibniz) {
@@ -158,6 +159,6 @@ export function compileExpressionLatex(
 
 export function getSliderSymbolFromLatex(latex: string): string | null {
   const plain = toPlainExpression(latex, "none");
-  const match = plain.match(/^([a-wA-W])\b/);
+  const match = plain.match(rx.REGEX_PLAIN_IDENTIFIER);
   return match ? match[1] : null;
 }

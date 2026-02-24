@@ -6,10 +6,11 @@
  * and re-renders. Bounded to 64 entries to cap memory.
  */
 
-import { compile as ceCompileExpr } from "@cortex-js/compute-engine";
+import { compile as ceCompileExpr, type Expression } from "@cortex-js/compute-engine";
 
 import { getCE, normalizeLatexInput } from "@/lib/latex";
 import { expandFunctionRefs, getRegistryVersion, parseFuncDef } from "@/lib/math/function-registry";
+import { extractIntegrals, syncSimpsonIntegrate } from "@/lib/math/ce-compile-integrate";
 
 export type EvalFn = (scope: Record<string, number>) => number;
 
@@ -18,165 +19,174 @@ export interface GLSLResult {
   preamble: string;
 }
 
+/* ── LRU helpers ─────────────────────────────────────── */
+
 const MAX_CACHE = 64;
 const jsCache = new Map<string, EvalFn | null>();
 const latexJsCache = new Map<string, EvalFn | null>();
 
-function lruGet<T>(cache: Map<string, T>, key: string): { hit: boolean; value: T | undefined } {
-  if (!cache.has(key)) return { hit: false, value: undefined };
+function lruGet<T>(cache: Map<string, T>, key: string): T | undefined {
+  if (!cache.has(key)) return undefined;
   const value = cache.get(key)!;
-  // Move to end to mark as recently used
   cache.delete(key);
   cache.set(key, value);
-  return { hit: true, value };
+  return value;
 }
 
 function lruSet<T>(cache: Map<string, T>, key: string, value: T, max = MAX_CACHE): void {
-  if (cache.size >= max) {
-    cache.delete(cache.keys().next().value!);
-  }
+  if (cache.size >= max) cache.delete(cache.keys().next().value!);
   cache.set(key, value);
 }
 
-/**
- * Compile a plain expression string into a fast JS evaluation function.
- * Accepts the plain-text format produced by `latexToExpr()`.
- * Uses canonical form (not raw) to avoid Delimiter parse nodes that
- * the compiler cannot handle (e.g. `x^(2)` → Delimiter wrapping the exponent).
- * Returns null on parse/compile failure.
- */
-export function ceCompile(expr: string): EvalFn | null {
-  if (!expr.trim()) return null;
-  const cached = lruGet(jsCache, expr);
-  if (cached.hit) return cached.value ?? null;
-  try {
-    const boxed = getCE().parse(expr, { strict: false });
-    const result = ceCompileExpr(boxed, { to: "javascript" });
-    if (!result.success || !result.run) {
-      lruSet(jsCache, expr, null);
-      return null;
-    }
-    const fn = wrapRun(result.run);
-    lruSet(jsCache, expr, fn);
-    return fn;
-  } catch {
-    lruSet(jsCache, expr, null);
-    return null;
-  }
-}
+/* ── Core compilation ────────────────────────────────── */
 
 /**
- * Compile safely, returning null on failure.
+ * Wraps a CE `run` function to always return a finite number.
+ * CE can return complex objects or throw on missing symbols.
  */
-export function safeCompile(expr: string): EvalFn | null {
-  return ceCompile(expr);
-}
-
-// Matches higher-order Leibniz notation CE can't parse directly:
-//   \frac{d^{n}}{dx^{n}}  or  \frac{\mathrm{d}^{n}}{\mathrm{d}x^{n}}
-const LEIBNIZ_RE =
-  /^\\frac\{(?:\\mathrm\{d\}|d)\^?\{?(\d+)?\}?\}\{(?:\\mathrm\{d\}|d)\s*(\w)\^?\{?\d*\}?\}(.+)$/;
-
 function wrapRun(run: (scope: Record<string, number>) => unknown): EvalFn {
   return (scope) => {
     try {
       const r = run(scope);
       return typeof r === "number" ? r : (r as { re: number }).re ?? NaN;
     } catch {
-      // CE-compiled code may reference internal symbols (e.g. "Nothing")
-      // that don't exist in the JS scope — treat as evaluation failure.
       return NaN;
     }
   };
 }
 
 /**
+ * Compiles a CE expression, transparently extracting any `Integrate` nodes
+ * and wiring them up as synchronous Simpson's-rule evaluators at runtime.
+ * This is the single compilation entry-point — every public function below
+ * delegates here after parsing/normalizing.
+ */
+function compileWithIntegrals(boxed: Expression): EvalFn | null {
+  const ce = getCE();
+  const { expr: rewritten, integrals } = extractIntegrals(boxed, ce);
+
+  const mainResult = ceCompileExpr(rewritten, { to: "javascript" });
+  if (!mainResult.success || !mainResult.run) return null;
+  const mainRun = wrapRun(mainResult.run);
+
+  // Fast path: no integrals found, return the compiled function directly
+  if (integrals.length === 0) return mainRun;
+
+  const compiled = integrals.map((int) => {
+    const ir = ceCompileExpr(int.integrand, { to: "javascript" });
+    const lr = ceCompileExpr(int.lower, { to: "javascript" });
+    const ur = ceCompileExpr(int.upper, { to: "javascript" });
+    return {
+      id: int.id,
+      variable: int.variable,
+      integrand: ir.success && ir.run ? wrapRun(ir.run) : () => NaN,
+      lower: lr.success && lr.run ? wrapRun(lr.run) : () => NaN,
+      upper: ur.success && ur.run ? wrapRun(ur.run) : () => NaN,
+    };
+  });
+
+  return (scope: Record<string, number>) => {
+    for (const int of compiled) {
+      scope[int.id] = syncSimpsonIntegrate(
+        int.integrand, int.variable,
+        int.lower(scope), int.upper(scope),
+        scope,
+      );
+    }
+    const result = mainRun(scope);
+    // Clean up injected placeholder keys
+    for (const int of compiled) delete scope[int.id];
+    return result;
+  };
+}
+
+/**
+ * Shared helper: try to compile, cache the result either way.
+ * Eliminates the repetitive try/catch + lruSet pattern.
+ */
+function cachedCompile(
+  cache: Map<string, EvalFn | null>,
+  key: string,
+  buildExpr: () => Expression | null,
+): EvalFn | null {
+  const cached = lruGet(cache, key);
+  if (cached !== undefined) return cached;
+  try {
+    const expr = buildExpr();
+    const fn = expr ? compileWithIntegrals(expr) : null;
+    lruSet(cache, key, fn);
+    return fn;
+  } catch {
+    lruSet(cache, key, null);
+    return null;
+  }
+}
+
+/* ── Public API ──────────────────────────────────────── */
+
+/**
+ * Compile a plain-text expression string (from `latexToExpr()`).
+ */
+export function ceCompile(expr: string): EvalFn | null {
+  if (!expr.trim()) return null;
+  return cachedCompile(jsCache, expr, () =>
+    getCE().parse(expr, { strict: false }),
+  );
+}
+
+/** @deprecated Alias kept for call-sites that haven't migrated. */
+export const safeCompile = ceCompile;
+
+// Matches higher-order Leibniz notation CE can't parse directly
+const LEIBNIZ_RE =
+  /^\\frac\{(?:\\mathrm\{d\}|d)\^?\{?(\d+)?\}?\}\{(?:\\mathrm\{d\}|d)\s*(\w)\^?\{?\d*\}?\}(.+)$/;
+
+/**
  * Compile LaTeX directly to a JS evaluation function.
- * CE's LaTeX parser handles \log_{10}, \sqrt[3]{x}, etc. correctly
- * without the lossy plain-text round-trip.
- *
- * For higher-order Leibniz derivatives (\frac{d^n}{dx^n}),
- * applies CE's symbolic D function iteratively since CE only
- * auto-detects first-order d/dx.
+ * Handles `y=`/`z=` prefix stripping and higher-order Leibniz derivatives.
  */
 export function ceCompileFromLatex(latex: string): EvalFn | null {
   if (!latex.trim()) return null;
-  const cached = lruGet(latexJsCache, latex);
-  if (cached.hit) return cached.value ?? null;
-  try {
+  return cachedCompile(latexJsCache, latex, () => {
     const ce = getCE();
-    const normalizedLatex = normalizeLatexInput(latex);
-    if (!ce || typeof ce.parse !== "function" || typeof ce.box !== "function") {
-      lruSet(latexJsCache, latex, null);
-      return null;
-    }
+    const normalized = normalizeLatexInput(latex);
+    if (!ce?.parse || !ce.box) return null;
 
-    // Handle higher-order Leibniz derivatives that CE misparses
-    const leibniz = LEIBNIZ_RE.exec(normalizedLatex);
+    // Strip "y=" or "f(x)=" prefix from LaTeX before regex matching,
+    // otherwise the ^ anchor in LEIBNIZ_RE fails.
+    const withoutPrefix = normalized.replace(/^(?:[a-zA-Z]\s*(?:\\left|\\mleft)?\s*\(\s*[a-zA-Z]\s*(?:\\right|\\mright)?\s*\)|[a-zA-Z])\s*=\s*/, "");
+
+    // Higher-order Leibniz: d^n/dx^n f(x)
+    const leibniz = LEIBNIZ_RE.exec(withoutPrefix);
     if (leibniz) {
       const order = leibniz[1] ? parseInt(leibniz[1], 10) : 1;
       const diffVar = leibniz[2];
-      const bodyLatex = leibniz[3].trim();
-      const parsedBody = ce.parse(bodyLatex, { strict: false });
-      if (!parsedBody || typeof parsedBody !== "object" || !("json" in parsedBody)) {
-        lruSet(latexJsCache, latex, null);
-        return null;
-      }
-      let expr = ce.box(parsedBody.json as Parameters<typeof ce.box>[0]);
+      const body = ce.parse(leibniz[3].trim(), { strict: false });
+      if (!body?.json) return null;
+      type BoxArg = Parameters<typeof ce.box>[0];
+      let expr = ce.box(body.json as BoxArg);
       for (let i = 0; i < order; i++) {
         expr = ce.box(["D", expr, diffVar]).evaluate();
       }
-      const result = ceCompileExpr(expr, { to: "javascript" });
-      if (!result.success || !result.run) {
-        lruSet(latexJsCache, latex, null);
-        return null;
-      }
-      const fn = wrapRun(result.run);
-      lruSet(latexJsCache, latex, fn);
-      return fn;
+      return expr;
     }
 
-    const parsed = ce.parse(normalizedLatex, { strict: false });
-    if (!parsed || typeof parsed !== "object" || !("json" in parsed)) {
-      lruSet(latexJsCache, latex, null);
-      return null;
-    }
-    const boxed = ce.box(parsed.json as Parameters<typeof ce.box>[0]);
+    const parsed = ce.parse(normalized, { strict: false });
+    if (!parsed?.json) return null;
+    type BoxArg = Parameters<typeof ce.box>[0];
+    const boxed = ce.box(parsed.json as BoxArg);
     const json = boxed.json;
 
-    // Strip y= or z= prefix
+    // Strip y= or z= prefix so the RHS compiles as a numeric evaluator
     if (Array.isArray(json) && json[0] === "Equal" && json.length >= 3) {
       const lhs = json[1];
-      if (lhs === "y" || lhs === "z") {
-        const rhsJson = json[2] as Parameters<typeof ce.box>[0] | undefined;
-        if (rhsJson === undefined) {
-          lruSet(latexJsCache, latex, null);
-          return null;
-        }
-        const rhs = ce.box(rhsJson);
-        const result = ceCompileExpr(rhs, { to: "javascript" });
-        if (!result.success || !result.run) {
-          lruSet(latexJsCache, latex, null);
-          return null;
-        }
-        const fn = wrapRun(result.run);
-        lruSet(latexJsCache, latex, fn);
-        return fn;
+      if ((lhs === "y" || lhs === "z") && json[2] !== undefined) {
+        return ce.box(json[2] as BoxArg);
       }
     }
 
-    const result = ceCompileExpr(boxed, { to: "javascript" });
-    if (!result.success || !result.run) {
-      lruSet(latexJsCache, latex, null);
-      return null;
-    }
-    const fn = wrapRun(result.run);
-    lruSet(latexJsCache, latex, fn);
-    return fn;
-  } catch {
-    lruSet(latexJsCache, latex, null);
-    return null;
-  }
+    return boxed;
+  });
 }
 
 /**
@@ -187,11 +197,8 @@ export function ceCompileImplicitFromLatex(latex: string): EvalFn | null {
   if (!latex.trim()) return null;
   try {
     const ce = getCE();
-    const normalizedLatex = normalizeLatexInput(latex);
-    const parsed = ce.parse(normalizedLatex, { strict: false });
-    if (!parsed || typeof parsed !== "object" || !("json" in parsed)) {
-      return null;
-    }
+    const parsed = ce.parse(normalizeLatexInput(latex), { strict: false });
+    if (!parsed?.json) return null;
 
     type BoxArg = Parameters<typeof ce.box>[0];
     let boxed = ce.box(parsed.json as BoxArg);
@@ -205,28 +212,21 @@ export function ceCompileImplicitFromLatex(latex: string): EvalFn | null {
       }
     }
 
-    const result = ceCompileExpr(boxed, { to: "javascript" });
-    if (!result.success || !result.run) return null;
-    return wrapRun(result.run);
+    return compileWithIntegrals(boxed);
   } catch {
     return null;
   }
 }
 
 /**
- * Compile LaTeX directly to GLSL, bypassing the plain-text intermediate.
- * CE's LaTeX parser correctly handles functions like \log_{10},
- * \sqrt[3]{x}, etc. that the plain-text parser mangles into
- * individual variable names.
+ * Compile LaTeX directly to GLSL for GPU-accelerated rendering.
  */
 export function ceCompileGLSLFromLatex(latex: string): GLSLResult | null {
   if (!latex.trim()) return null;
   try {
     const boxed = getCE().parse(normalizeLatexInput(latex));
     const json = boxed.json;
-    // Reject equations/booleans that produce non-float GLSL (e.g. x == a)
-    if (Array.isArray(json) && (json[0] === "Equal" || json[0] === "Less" ||
-      json[0] === "Greater" || json[0] === "LessEqual" || json[0] === "GreaterEqual")) {
+    if (Array.isArray(json) && ["Equal", "Less", "Greater", "LessEqual", "GreaterEqual"].includes(json[0] as string)) {
       return null;
     }
     const result = ceCompileExpr(boxed, { to: "glsl" });
@@ -239,12 +239,7 @@ export function ceCompileGLSLFromLatex(latex: string): GLSLResult | null {
 
 /**
  * Compile LaTeX with user-defined function expansion.
- * Handles both:
- *  - Definitions: f(x) = x^2+2x → compiles just the RHS
- *  - References:  f(x)+3 → expands f(x) to (x^2+2x), then compiles
- *
- * Not LRU-cached by LaTeX string alone because the result depends on
- * the current function registry state. Uses a version-gated cache instead.
+ * Uses a version-gated cache that invalidates when the function registry changes.
  */
 const funcCache = new Map<string, EvalFn | null>();
 let lastRegVer = -1;
@@ -257,44 +252,25 @@ export function ceCompileFromLatexWithFuncs(latex: string): EvalFn | null {
     funcCache.clear();
     lastRegVer = ver;
   }
-  if (funcCache.has(latex)) return funcCache.get(latex) ?? null;
 
-  try {
+  return cachedCompile(funcCache, latex, () => {
     const ce = getCE();
-    const normalizedLatex = normalizeLatexInput(latex);
-    const boxed = ce.parse(normalizedLatex);
+    const boxed = ce.parse(normalizeLatexInput(latex));
     let json: unknown = boxed.json;
 
-    // Function definition: f(x) = expr → compile just the RHS.
-    // Delegates to parseFuncDef which handles all CE parse variants
-    // (InvisibleOperator, direct call head, Apply).
+    // Function definition: f(x) = expr → compile just the RHS
     if (Array.isArray(json) && json[0] === "Equal") {
       const def = parseFuncDef(latex);
       if (def) {
         json = def.bodyJson;
       } else {
         const lhs = json[1];
-        if (lhs === "y" || lhs === "z") {
-          json = json[2];
-        }
+        if (lhs === "y" || lhs === "z") json = json[2];
       }
     }
 
-    // Expand function references (no-op when registry is empty)
     json = expandFunctionRefs(json);
-
     type BoxArg = Parameters<typeof ce.box>[0];
-    const toCompile = ce.box(json as BoxArg);
-    const result = ceCompileExpr(toCompile, { to: "javascript" });
-    if (!result.success || !result.run) {
-      funcCache.set(latex, null);
-      return null;
-    }
-    const fn = wrapRun(result.run);
-    funcCache.set(latex, fn);
-    return fn;
-  } catch {
-    funcCache.set(latex, null);
-    return null;
-  }
+    return ce.box(json as BoxArg);
+  });
 }

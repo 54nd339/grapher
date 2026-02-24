@@ -1,34 +1,6 @@
 import type { EvalFn } from "./ce-compile";
 import { safeEval } from "./safe-eval";
 
-/**
- * Compute the arc length of f(x) over [a, b] using Simpson's rule on sqrt(1 + f'(x)^2).
- */
-export function arcLength(
-  fn: EvalFn,
-  a: number,
-  b: number,
-  scope: Record<string, number>,
-  n = 200,
-): number {
-  if (!isFinite(a) || !isFinite(b) || a >= b) return 0;
-  const h = (b - a) / n;
-  const H = 1e-6;
-
-  let sum = 0;
-  for (let i = 0; i <= n; i++) {
-    const x = a + i * h;
-    const yp = safeEval(fn, { ...scope, x: x + H });
-    const ym = safeEval(fn, { ...scope, x: x - H });
-    const deriv = (yp - ym) / (2 * H);
-    const integrand = Math.sqrt(1 + deriv * deriv);
-
-    if (i === 0 || i === n) sum += integrand;
-    else if (i % 2 === 1) sum += 4 * integrand;
-    else sum += 2 * integrand;
-  }
-  return (h / 3) * sum;
-}
 
 /**
  * Compute the signed curvature κ(x) = f''(x) / (1 + f'(x)^2)^(3/2).
@@ -81,4 +53,88 @@ export function osculatingCircle(
 
   return { cx, cy, radius };
 }
+
+/**
+ * Compute the slope dy/dx = -fx/fy for an implicit curve f(x,y)=0.
+ */
+export function implicitTangentSlope(
+  fn: EvalFn,
+  x: number,
+  y: number,
+  scope: Record<string, number>,
+): number {
+  const h = 1e-6;
+  const f_plus_x = safeEval(fn, { ...scope, x: x + h, y });
+  const f_minus_x = safeEval(fn, { ...scope, x: x - h, y });
+  const fx = (f_plus_x - f_minus_x) / (2 * h);
+
+  const f_plus_y = safeEval(fn, { ...scope, x, y: y + h });
+  const f_minus_y = safeEval(fn, { ...scope, x, y: y - h });
+  const fy = (f_plus_y - f_minus_y) / (2 * h);
+
+  if (Math.abs(fy) < 1e-12) return Infinity;
+  return -fx / fy;
+}
+
+/**
+ * Compute curvature for an implicit curve f(x,y)=0.
+ * κ = |fxx*fy^2 - 2*fxy*fx*fy + fyy*fx^2| / (fx^2 + fy^2)^(3/2)
+ */
+export function implicitCurvature(
+  fn: EvalFn,
+  x: number,
+  y: number,
+  scope: Record<string, number>,
+): number {
+  const h = 1e-4;
+  const f = (x0: number, y0: number) => safeEval(fn, { ...scope, x: x0, y: y0 });
+
+  const fx = (f(x + h, y) - f(x - h, y)) / (2 * h);
+  const fy = (f(x, y + h) - f(x, y - h)) / (2 * h);
+
+  const fxx = (f(x + h, y) - 2 * f(x, y) + f(x - h, y)) / (h * h);
+  const fyy = (f(x, y + h) - 2 * f(x, y) + f(x, y - h)) / (h * h);
+  const fxy = (f(x + h, y + h) - f(x + h, y - h) - f(x - h, y + h) + f(x - h, y - h)) / (4 * h * h);
+
+  const num = Math.abs(fxx * fy * fy - 2 * fxy * fx * fy + fyy * fx * fx);
+  const den = Math.pow(fx * fx + fy * fy, 1.5);
+
+  if (den < 1e-15) return 0;
+  return num / den;
+}
+
+/**
+ * Compute the radius and center of the osculating circle for an implicit curve.
+ */
+export function implicitOsculatingCircle(
+  fn: EvalFn,
+  x: number,
+  y: number,
+  scope: Record<string, number>,
+): { cx: number; cy: number; radius: number } | null {
+  const k = implicitCurvature(fn, x, y, scope);
+  if (isNaN(k) || Math.abs(k) < 1e-10) return null;
+
+  const radius = 1 / k;
+  if (radius > 1e4) return null;
+
+  const h = 1e-4;
+  const fx = (safeEval(fn, { ...scope, x: x + h, y }) - safeEval(fn, { ...scope, x: x - h, y })) / (2 * h);
+  const fy = (safeEval(fn, { ...scope, x, y: y + h }) - safeEval(fn, { ...scope, x, y: y - h })) / (2 * h);
+
+  const fxx = (safeEval(fn, { ...scope, x: x + h, y }) - 2 * safeEval(fn, { ...scope, x, y }) + safeEval(fn, { ...scope, x: x - h, y })) / (h * h);
+  const fyy = (safeEval(fn, { ...scope, x, y: y + h }) - 2 * safeEval(fn, { ...scope, x, y }) + safeEval(fn, { ...scope, x, y: y - h })) / (h * h);
+  const fxy = (safeEval(fn, { ...scope, x: x + h, y: y + h }) - safeEval(fn, { ...scope, x: x + h, y: y - h }) - safeEval(fn, { ...scope, x: x - h, y: y + h }) + safeEval(fn, { ...scope, x: x - h, y: y - h })) / (4 * h * h);
+
+  const denom = fxx * fy * fy - 2 * fxy * fx * fy + fyy * fx * fx;
+  if (Math.abs(denom) < 1e-15) return null;
+
+  const factor = (fx * fx + fy * fy) / denom;
+  return {
+    cx: x - factor * fx,
+    cy: y - factor * fy,
+    radius: Math.abs(factor) * Math.sqrt(fx * fx + fy * fy)
+  };
+}
+
 

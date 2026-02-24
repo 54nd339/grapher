@@ -117,17 +117,36 @@ export function FractalOverlay({
     const prog = programRef.current;
     gl.useProgram(prog);
 
+    // High-precision split helper
+    const split = (v: number): [number, number] => {
+      const hi = Math.fround(v);
+      const lo = v - hi;
+      return [hi, lo];
+    };
+
+    const [xMinHi, xMinLo] = split(localViewport.xMin);
+    const [yMinHi, yMinLo] = split(localViewport.yMin);
+    const [xMaxHi, xMaxLo] = split(localViewport.xMax);
+    const [yMaxHi, yMaxLo] = split(localViewport.yMax);
+
     // Set uniforms
     const resLoc = gl.getUniformLocation(prog, "u_resolution");
-    const vbLoc = gl.getUniformLocation(prog, "u_viewBox");
+    const vbHiLoc = gl.getUniformLocation(prog, "u_viewBoxHi");
+    const vbLoLoc = gl.getUniformLocation(prog, "u_viewBoxLo");
     const iterLoc = gl.getUniformLocation(prog, "u_maxIter");
+
     gl.uniform2f(resLoc, width, height);
-    gl.uniform4f(vbLoc, localViewport.xMin, localViewport.yMin, localViewport.xMax, localViewport.yMax);
+    gl.uniform4f(vbHiLoc, xMinHi, yMinHi, xMaxHi, yMaxHi);
+    gl.uniform4f(vbLoLoc, xMinLo, yMinLo, xMaxLo, yMaxLo);
     gl.uniform1i(iterLoc, maxIter);
 
     if (type === "julia") {
-      const cLoc = gl.getUniformLocation(prog, "u_c");
-      gl.uniform2f(cLoc, juliaC[0], juliaC[1]);
+      const cHiLoc = gl.getUniformLocation(prog, "u_cHi");
+      const cLoLoc = gl.getUniformLocation(prog, "u_cLo");
+      const [cxHi, cxLo] = split(juliaC[0]);
+      const [cyHi, cyLo] = split(juliaC[1]);
+      gl.uniform2f(cHiLoc, cxHi, cyHi);
+      gl.uniform2f(cLoLoc, cxLo, cyLo);
     }
 
     // Draw fullscreen quad

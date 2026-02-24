@@ -20,6 +20,7 @@ import {
   vectorDot,
   vectorEvaluate,
   vectorNorm,
+  simpsonIntegrate,
 } from "@/lib/math";
 import type { SolverResult, SolverCategory } from "@/types";
 
@@ -185,16 +186,18 @@ async function solveTrigonometry(input: string): Promise<SolverResult> {
     return errorResult("trigonometry", input, new Error("Invalid equation format"));
   }
 
-  const fn = ceCompile(`(${lhs}) - (${rhs})`);
+  const exprStr = `(${lhs}) - (${rhs})`;
+  const fn = ceCompile(exprStr);
   if (!fn) {
     return errorResult("trigonometry", input, new Error("Cannot compile trigonometric expression"));
   }
 
-  const roots = findZeros(fn, 0, 2 * Math.PI, {}, 600)
-    .filter((x) => isFinite(x))
-    .map((x) => ((x % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI))
-    .sort((a, b) => a - b)
-    .filter((x, i, arr) => i === 0 || Math.abs(x - arr[i - 1]) > 1e-4);
+  const rawRoots = await findZeros(exprStr, false, 0, 2 * Math.PI, {}, 600);
+  const roots = rawRoots
+    .filter((x: number) => isFinite(x))
+    .map((x: number) => ((x % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI))
+    .sort((a: number, b: number) => a - b)
+    .filter((x: number, i: number, arr: number[]) => i === 0 || Math.abs(x - arr[i - 1]) > 1e-4);
 
   if (roots.length === 0) {
     return errorResult("trigonometry", input, new Error("No solutions found"));
@@ -239,28 +242,23 @@ const INTEGRATE_PAREN = /^integrate\s*\((.+)\)$/;
 const INTEGRATE_BARE = /^integrate\s+(.+)$/;
 
 /**
- * Numerical definite integral via composite Simpson's rule.
+ * Numerical definite integral via worker-based composite Simpson's rule.
  * Falls back when CE can't evaluate the integral symbolically.
  */
-function numericalIntegrate(
+async function numericalIntegrate(
   exprStr: string,
   variable: string,
   a: number,
   b: number,
-): number | null {
+): Promise<number | null> {
   const fn = ceCompile(exprStr);
   if (!fn) return null;
-  const n = 1000; // must be even
-  const h = (b - a) / n;
-  let sum = 0;
-  for (let i = 0; i <= n; i++) {
-    const xVal = a + i * h;
-    const y = fn({ [variable]: xVal });
-    if (typeof y !== "number" || !isFinite(y)) return null;
-    const coeff = i === 0 || i === n ? 1 : i % 2 === 0 ? 2 : 4;
-    sum += coeff * y;
+
+  try {
+    return await simpsonIntegrate(exprStr, false, variable, a, b, {}, 1000);
+  } catch {
+    return null;
   }
-  return (h / 3) * sum;
 }
 
 /** Definite integral: try CE symbolic first, fall back to numerical. */
@@ -302,8 +300,8 @@ async function solveIntegral(
     }
   } catch { /* fall through to numerical */ }
 
-  // Numerical fallback (Simpson's rule)
-  const numResult = numericalIntegrate(body, variable, lower, upper);
+  // Numerical fallback (Simpson's rule via worker)
+  const numResult = await numericalIntegrate(body, variable, lower, upper);
   if (numResult !== null && isFinite(numResult)) {
     return {
       input,
@@ -481,7 +479,7 @@ function stripWrappingParens(value: string): string {
 
 function normalizeMatrixInput(rawInput: string): { normalized: string; unknownOperation: string | null } {
   const compact = rawInput.trim().replace(/\s+/g, "");
-  
+
   if (/^\*\[\[.+\]\]$/.test(compact)) {
     return { normalized: compact, unknownOperation: "<missing>" };
   }

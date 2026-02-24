@@ -110,6 +110,7 @@ export function Graph2D() {
     analysisOverlayEnabled,
     interactionOverlayEnabled,
     curvatureOverlayEnabled,
+    tangentLineEnabled,
   } = useGraphStore(
     useShallow((s) => ({
       viewport: s.viewport,
@@ -117,6 +118,7 @@ export function Graph2D() {
       analysisOverlayEnabled: s.analysisOverlayEnabled,
       interactionOverlayEnabled: s.interactionOverlayEnabled,
       curvatureOverlayEnabled: s.curvatureOverlayEnabled,
+      tangentLineEnabled: s.tangentLineEnabled,
     })),
   );
 
@@ -255,10 +257,7 @@ export function Graph2D() {
 
   const scope = useSliderScope();
   const activeExpr = expressions.find((e) => e.id === activeId);
-  const traceExpressions =
-    activeExpr && activeExpr.visible && activeExpr.latex
-      ? [activeExpr]
-      : [];
+  const traceExpressions = visibleExpressions;
 
   const traceHit = useCurveTrace(
     traceExpressions,
@@ -301,26 +300,25 @@ export function Graph2D() {
           <ExpressionPlot key={expr.id} expression={expr} />
         ))}
 
-        {activeHit && <CurveTraceDot hit={activeHit} showLabel={false} />}
+        {activeHit && <CurveTraceDot hit={activeHit} />}
 
-        {/* Tangent line at hover point for active expression */}
-        {activeExpr && activeExpr.visible && tracePoint && useGraphStore.getState().tangentLineEnabled && (
-          <TangentLine expression={activeExpr} x={tracePoint.x} scope={scope} />
+        {/* Tangent line at hover point */}
+        {activeHit && tangentLineEnabled && (
+          <TangentLine hit={activeHit} scope={scope} />
         )}
 
-        {analysisOverlayEnabled && activeExpr && activeExpr.visible && activeExpr.latex && (
-          <AnalysisOverlay expression={activeExpr} scope={scope} />
+        {analysisOverlayEnabled && (activeHit?.expression || activeExpr) && (activeHit?.expression ?? activeExpr)?.visible && (
+          <AnalysisOverlay expression={activeHit?.expression || activeExpr!} scope={scope} />
         )}
 
         {interactionOverlayEnabled && (
           <IntersectionOverlay expressions={visibleExpressions} scope={scope} />
         )}
 
-        {curvatureOverlayEnabled && activeExpr && activeExpr.visible && activeExpr.latex && (
+        {curvatureOverlayEnabled && activeHit && (
           <CurvatureOverlay
-            expression={activeExpr}
+            hit={activeHit}
             scope={scope}
-            hoverX={activeHit?.mathX ?? null}
           />
         )}
 

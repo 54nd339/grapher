@@ -1,46 +1,109 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Point, Plot, Text, Line } from "mafs";
 
-import { compileExpressionLatex, safeEval, curvature, arcLength } from "@/lib/math";
+import { compileExpressionLatex, safeEval, curvature, implicitOsculatingCircle, tryParametrizeImplicit } from "@/lib/math";
+import { latexToExpr } from "@/lib/latex";
+import { toPlainExpression } from "@/lib/math/expression-resolution";
+import { getMathWorker } from "@/workers/math-api";
 import { useGraphStore } from "@/stores";
 import type { Expression } from "@/types";
+import type { TraceHit } from "./curve-trace";
 
 interface CurvatureOverlayProps {
-  expression: Expression;
+  hit: TraceHit;
   scope: Record<string, number>;
-  hoverX: number | null;
 }
 
 /**
  * Shows curvature info and osculating circle at hover point.
- * Also displays arc length in the viewport range.
+ * Also displays arc length in the viewport range (algebraic only for now).
  */
-export function CurvatureOverlay({ expression, scope, hoverX }: CurvatureOverlayProps) {
+export function CurvatureOverlay({ hit, scope }: CurvatureOverlayProps) {
   const viewport = useGraphStore((s) => s.viewport);
+  const { expression, mathX: hoverX, mathY: hoverY } = hit;
 
   const fn = useMemo(() => {
     if (
       expression.kind === "slider" ||
-      expression.kind === "implicit" ||
-      expression.kind === "points" ||
-      expression.kind === "parametric" ||
-      expression.kind === "polar"
+      expression.kind === "points"
     )
       return null;
 
     return compileExpressionLatex(expression.latex, { mode: "graph-2d" });
   }, [expression]);
 
-  const arcLen = useMemo(() => {
-    if (!fn) return null;
-    const len = arcLength(fn, viewport.xMin, viewport.xMax, scope);
-    return isFinite(len) ? len : null;
-  }, [fn, viewport.xMin, viewport.xMax, scope]);
+  const [arcLen, setArcLen] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (
+      expression.kind === "slider" ||
+      expression.kind === "implicit" ||
+      expression.kind === "points" ||
+      expression.kind === "parametric" ||
+      expression.kind === "polar"
+    ) {
+      setArcLen(null);
+      return;
+    }
+
+    let cancelled = false;
+    const compute = async () => {
+      try {
+        const worker = getMathWorker();
+        const plainLatex = toPlainExpression(expression.latex, "graph-2d");
+        const len = await worker.computeArcLength(
+          plainLatex,
+          true,
+          viewport.xMin,
+          viewport.xMax,
+          scope
+        );
+        if (!cancelled && typeof len === "number" && isFinite(len)) {
+          setArcLen(len);
+        } else if (!cancelled) {
+          setArcLen(null);
+        }
+      } catch {
+        if (!cancelled) setArcLen(null);
+      }
+    };
+    compute();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [expression.latex, expression.kind, viewport.xMin, viewport.xMax, scope]);
 
   const curveData = useMemo(() => {
     if (!fn || hoverX == null) return null;
+
+    if (expression.kind === "implicit") {
+      const plain = latexToExpr(expression.latex);
+      const param = tryParametrizeImplicit(plain);
+
+      if (param?.kind === "circle") {
+        return {
+          y: hoverY,
+          k: 1 / param.r,
+          radius: param.r,
+          cx: param.cx,
+          cy: param.cy,
+        };
+      }
+
+      const circle = implicitOsculatingCircle(fn, hoverX, hoverY, scope);
+      if (!circle) return null;
+
+      return {
+        y: hoverY,
+        k: 1 / circle.radius,
+        radius: circle.radius,
+        cx: circle.cx,
+        cy: circle.cy
+      };
+    }
 
     const y = safeEval(fn, { ...scope, x: hoverX });
     if (isNaN(y)) return null;
@@ -68,7 +131,7 @@ export function CurvatureOverlay({ expression, scope, hoverX }: CurvatureOverlay
       cx: hoverX + sign * nx * radius,
       cy: y + sign * ny * radius,
     };
-  }, [fn, hoverX, scope]);
+  }, [fn, expression, hoverX, hoverY, scope]);
 
   if (!fn) return null;
 
@@ -103,21 +166,21 @@ export function CurvatureOverlay({ expression, scope, hoverX }: CurvatureOverlay
             weight={1}
           />
           <Line.Segment
-            point1={[hoverX!, curveData.y]}
+            point1={[hoverX, curveData.y]}
             point2={[curveData.cx, curveData.cy]}
             color={expression.color}
             opacity={0.2}
             style="dashed"
           />
           <Text
-            x={hoverX!}
+            x={hoverX}
             y={curveData.y}
             attach="sw"
             attachDistance={16}
             size={10}
             color={expression.color}
           >
-            κ={curveData.k.toFixed(4)}, R={curveData.radius.toFixed(3)}
+            κ={Math.abs(curveData.k).toFixed(4)}, R={curveData.radius.toFixed(3)}
           </Text>
         </>
       )}

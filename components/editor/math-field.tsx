@@ -19,15 +19,18 @@ export function ensureMathLive(): Promise<void> {
   if (!mathLiveReady) {
     mathLiveReady = import("mathlive").then(async (ml) => {
       ml.MathfieldElement.fontsDirectory = "/fonts/mathlive";
-      (ml.MathfieldElement as unknown as { virtualKeyboardMode?: "manual" | "onfocus" | "off" }).virtualKeyboardMode = "manual";
+      ml.MathfieldElement.soundsDirectory = null;
+
+      const isLargeScreen = typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
+      (ml.MathfieldElement as unknown as { virtualKeyboardMode?: "manual" | "onfocus" | "off" }).virtualKeyboardMode = isLargeScreen ? "manual" : "onfocus";
       if (typeof window !== "undefined") {
         const win = window as unknown as {
           mathVirtualKeyboardPolicy?: "manual" | "auto";
           mathVirtualKeyboard?: { policy?: "manual" | "auto" };
         };
-        win.mathVirtualKeyboardPolicy = "manual";
+        win.mathVirtualKeyboardPolicy = isLargeScreen ? "manual" : "auto";
         if (win.mathVirtualKeyboard) {
-          win.mathVirtualKeyboard.policy = "manual";
+          win.mathVirtualKeyboard.policy = isLargeScreen ? "manual" : "auto";
         }
       }
       await customElements.whenDefined("math-field");
@@ -62,9 +65,15 @@ export function MathField({
   // being treated as implicit multiplication of individual variables.
   useEffect(() => {
     if (!ready) return;
-    const el = ref.current as HTMLElement & { inlineShortcuts: Record<string, string> } | null;
+    const el = ref.current as HTMLElement & {
+      inlineShortcuts: Record<string, string>;
+      menuItems: Array<{ id?: string }>;
+    } | null;
     if (!el) return;
-    (el as unknown as { virtualKeyboardMode?: "manual" | "onfocus" | "off" }).virtualKeyboardMode = virtualKeyboardMode;
+    const isLargeScreen = typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
+    (el as unknown as { virtualKeyboardMode?: string }).virtualKeyboardMode = isLargeScreen ? "manual" : "onfocus";
+    (el as unknown as { virtualKeyboardToggle?: string }).virtualKeyboardToggle = isLargeScreen ? "hidden" : "manual";
+
     const defaults = { ...el.inlineShortcuts };
     delete defaults["in"];
     el.inlineShortcuts = {
@@ -76,11 +85,21 @@ export function MathField({
       "norm": "\\operatorname{norm}",
       "eigs": "\\operatorname{eigs}",
     };
+
+    // Flatten Insert submenu to top-level so items are one click away
+    const insertItem = el.menuItems.find((item) => item.id === "insert") as
+      { submenu?: Array<{ id?: string }> } | undefined;
+    el.menuItems = insertItem?.submenu ?? [];
   }, [ready, virtualKeyboardMode]);
 
   const handleInput = useCallback(
     (e: Event) => {
-      const target = e.target as HTMLElement & { value: string };
+      const target = e.currentTarget as HTMLElement & { value: string; hasFocus?: () => boolean };
+
+      // MathLive manual keyboard broadcasts inputs to all instances sometimes.
+      // Ignore input events if this math-field does not currently have focus.
+      if (typeof target.hasFocus === "function" && !target.hasFocus()) return;
+
       userEditing.current = true;
       onChange(target.value);
       requestAnimationFrame(() => { userEditing.current = false; });
@@ -131,7 +150,7 @@ export function MathField({
   return (
     <math-field
       ref={ref}
-      virtual-keyboard-mode={virtualKeyboardMode}
+      math-virtual-keyboard-policy={virtualKeyboardMode}
       placeholder={placeholder}
       className={className ?? DEFAULT_CLASS}
     />

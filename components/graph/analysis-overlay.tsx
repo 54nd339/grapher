@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
-import { Point } from "mafs";
+import { useState, useEffect, Fragment } from "react";
+import { Point, Text } from "mafs";
 
-import { compileExpressionLatex, findZeros, findExtrema, findIntersections } from "@/lib/math";
+import { compileExpressionLatex, findZeros, findExtrema, findIntersections, tryParametrizeImplicit } from "@/lib/math";
+import { latexToExpr } from "@/lib/latex";
 import { useGraphStore } from "@/stores";
 import type { Expression } from "@/types";
 
@@ -16,56 +17,121 @@ export function AnalysisOverlay({
 }) {
   const viewport = useGraphStore((s) => s.viewport);
 
-  const data = useMemo(() => {
+  const [data, setData] = useState<{
+    zeros: { x: number }[];
+    minima: { x: number; y: number }[];
+    maxima: { x: number; y: number }[];
+  }>({ zeros: [], minima: [], maxima: [] });
+
+  useEffect(() => {
     if (
       expression.kind === "slider" ||
-      expression.kind === "implicit" ||
       expression.kind === "parametric" ||
-      expression.kind === "polar" ||
-      expression.kind === "differential"
-    )
-      return { zeros: [] as { x: number }[], minima: [] as { x: number; y: number }[], maxima: [] as { x: number; y: number }[] };
+      expression.kind === "polar"
+    ) {
+      setData({ zeros: [], minima: [], maxima: [] });
+      return;
+    }
+
+    if (expression.kind === "implicit") {
+      const plain = latexToExpr(expression.latex);
+      const param = tryParametrizeImplicit(plain);
+
+      let cancelled = false;
+
+      (async () => {
+        try {
+          const zeros = await findIntersections(expression.latex, "0", viewport.xMin, viewport.xMax, scope);
+          if (cancelled) return;
+
+          if (param?.kind === "circle") {
+            const { cx, cy, r } = param;
+            setData({
+              zeros: zeros.map(([x]) => ({ x })),
+              minima: [{ x: cx, y: cy - r }],
+              maxima: [{ x: cx, y: cy + r }],
+            });
+          } else {
+            setData({
+              zeros: zeros.map(([x]) => ({ x })),
+              minima: [],
+              maxima: [],
+            });
+          }
+        } catch {
+          if (!cancelled) setData({ zeros: [], minima: [], maxima: [] });
+        }
+      })();
+
+      return () => { cancelled = true; };
+    }
 
     const compiled = compileExpressionLatex(expression.latex, {
       mode: "graph-2d",
       allowUserFunctions: true,
     });
-    if (!compiled) return { zeros: [], minima: [], maxima: [] };
-
-    try {
-      const zeros = findZeros(compiled, viewport.xMin, viewport.xMax, scope);
-      const { minima, maxima } = findExtrema(
-        compiled,
-        viewport.xMin,
-        viewport.xMax,
-        scope,
-      );
-      return {
-        zeros: zeros.map((x) => ({ x })),
-        minima: minima.map((x) => ({
-          x,
-          y: compiled({ ...scope, x }) as number,
-        })),
-        maxima: maxima.map((x) => ({
-          x,
-          y: compiled({ ...scope, x }) as number,
-        })),
-      };
-    } catch {
-      return { zeros: [], minima: [], maxima: [] };
+    if (!compiled) {
+      setData({ zeros: [], minima: [], maxima: [] });
+      return;
     }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const [zeros, extrema] = await Promise.all([
+          findZeros(expression.latex, true, viewport.xMin, viewport.xMax, scope),
+          findExtrema(expression.latex, true, viewport.xMin, viewport.xMax, scope),
+        ]);
+
+        if (cancelled) return;
+
+        setData({
+          zeros: zeros.map((x) => ({ x })),
+          minima: extrema.minima.map((x) => ({
+            x,
+            y: compiled({ ...scope, x }) as number,
+          })),
+          maxima: extrema.maxima.map((x) => ({
+            x,
+            y: compiled({ ...scope, x }) as number,
+          })),
+        });
+      } catch {
+        if (!cancelled) setData({ zeros: [], minima: [], maxima: [] });
+      }
+    })();
+
+    return () => { cancelled = true; };
   }, [expression, scope, viewport]);
+
+  const formatCoord = (n: number) => (Math.abs(n) < 1e-10 ? "0" : n.toFixed(2));
 
   return (
     <>
       {data.zeros.map((p, i) => (
-        <Point key={`z${i}`} x={p.x} y={0} color="var(--foreground)" />
+        <Fragment key={`z${i}`}>
+          <Point x={p.x} y={0} color="var(--foreground)" />
+          <Text x={p.x} y={0} attach="nw" attachDistance={14} size={12} color="var(--foreground)">
+            ({formatCoord(p.x)}, 0)
+          </Text>
+        </Fragment>
       ))}
       {data.maxima.map((p, i) => (
-        <Point key={`max${i}`} x={p.x} y={p.y} color={expression.color} />
+        <Fragment key={`max${i}`}>
+          <Point x={p.x} y={p.y} color={expression.color} />
+          <Text x={p.x} y={p.y} attach="s" attachDistance={14} size={12} color={expression.color}>
+            ({formatCoord(p.x)}, {formatCoord(p.y)})
+          </Text>
+        </Fragment>
       ))}
       {data.minima.map((p, i) => (
-        <Point key={`min${i}`} x={p.x} y={p.y} color={expression.color} />
+        <Fragment key={`min${i}`}>
+          <Point x={p.x} y={p.y} color={expression.color} />
+          <Text x={p.x} y={p.y} attach="n" attachDistance={14} size={12} color={expression.color}>
+            ({formatCoord(p.x)}, {formatCoord(p.y)})
+          </Text>
+        </Fragment>
       ))}
     </>
   );
@@ -80,37 +146,57 @@ export function IntersectionOverlay({
 }) {
   const viewport = useGraphStore((s) => s.viewport);
 
-  const points = useMemo(() => {
-    const algebraicExprs = expressions.filter(
+  const [points, setPoints] = useState<Array<[number, number]>>([]);
+
+  useEffect(() => {
+    const relevantExprs = expressions.filter(
       (e) =>
         e.visible &&
         e.latex &&
-        (e.kind === "algebraic" || e.kind === "trigonometric" || e.kind === "calculus" || e.kind === "series"),
+        (e.kind === "algebraic" ||
+          e.kind === "trigonometric" ||
+          e.kind === "calculus" ||
+          e.kind === "series" ||
+          e.kind === "differential" ||
+          e.kind === "implicit"),
     );
-    if (algebraicExprs.length < 2) return [];
+    if (relevantExprs.length < 2) {
+      setPoints([]);
+      return;
+    }
 
-    const compiled = algebraicExprs.map((e) => {
-      return compileExpressionLatex(e.latex, {
+    const compiled = relevantExprs.map((e) =>
+      compileExpressionLatex(e.latex, {
         mode: "graph-2d",
         allowUserFunctions: true,
-      });
-    });
+      }),
+    );
 
-    const result: Array<[number, number]> = [];
-    for (let i = 0; i < compiled.length; i++) {
-      for (let j = i + 1; j < compiled.length; j++) {
-        if (!compiled[i] || !compiled[j]) continue;
-        const pts = findIntersections(
-          compiled[i]!,
-          compiled[j]!,
-          viewport.xMin,
-          viewport.xMax,
-          scope,
-        );
-        result.push(...pts);
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const result: Array<[number, number]> = [];
+        for (let i = 0; i < compiled.length; i++) {
+          for (let j = i + 1; j < compiled.length; j++) {
+            if (!compiled[i] || !compiled[j]) continue;
+            const pts = await findIntersections(
+              relevantExprs[i].latex,
+              relevantExprs[j].latex,
+              viewport.xMin,
+              viewport.xMax,
+              scope,
+            );
+            result.push(...pts);
+          }
+        }
+        if (!cancelled) setPoints(result);
+      } catch {
+        if (!cancelled) setPoints([]);
       }
-    }
-    return result;
+    })();
+
+    return () => { cancelled = true; };
   }, [expressions, scope, viewport]);
 
   return (

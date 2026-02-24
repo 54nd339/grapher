@@ -25,6 +25,7 @@ Interactive 2D/3D graphing calculator with an equation solver, LaTeX input, and 
 | 2D rendering | **Mafs** — SVG graph layer for axes, standard plots, and implicit contours via marching squares |
 | 3D rendering | **Three.js** / **React Three Fiber** + **Drei** — GPU surface shaders with CPU fallback |
 | Fractals | Custom **WebGL2** fragment shaders (Mandelbrot, Julia) |
+| Performance | **Web Workers (Comlink)** — Offloading of heavy $O(N^2)/O(N^3)$ rendering primitives (3D surfaces, ODE Runge-Kutta, explicit limits) |
 | Drag & drop | **@dnd-kit** for sortable expression reordering |
 | PWA | Installable static PWA powered by `@ducanh2912/next-pwa` with generated Workbox service worker |
 | Linting | **ESLint 9** flat config with `eslint-config-next` (core-web-vitals + TypeScript) |
@@ -33,6 +34,7 @@ Interactive 2D/3D graphing calculator with an equation solver, LaTeX input, and 
 
 - **Server Components by default** — `'use client'` only on interactive leaf components
 - **No business logic in components** — all math, evaluation, and parsing lives in `lib/`
+- **Web Workers for Math Evaluation** — CPU-intensive math loops (implicit curves, Runge-Kutta ODE integration, 3D grids) are compiled (`ceCompile`) and executed entirely inside web workers using `Comlink` to prevent main thread blocking. Simple $O(N)$ operations remain synchronous to avoid IPC latency.
 - **Dynamic imports** for heavy libraries (MathLive, Three.js, Compute Engine) to keep the initial bundle small
 - **WebGL2 shaders** for performance-critical rendering: fractal overlays and 3D surface materials
 - **State split by concern** — expression, graph, solver, and UI stores keep subscriptions focused

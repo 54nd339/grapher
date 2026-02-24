@@ -21,7 +21,7 @@ import {
   IMPLICIT_VIEW_MAX,
   IMPLICIT_MAX_POLYGONS,
 } from "@/lib/constants";
-import { ceCompile, ceCompileImplicitFromLatex, compileExpressionLatex, toPlainExpression } from "@/lib/math";
+import { compileExpressionLatex, toPlainExpression } from "@/lib/math";
 
 /* ── GPU Surface (vertex-shader displacement) ────────── */
 
@@ -212,9 +212,20 @@ export function ImplicitMarchingCubes3D({
     );
 
     nextMesh.isolation = 0;
-    const span = IMPLICIT_VIEW_MAX - IMPLICIT_VIEW_MIN;
-    nextMesh.position.set(IMPLICIT_VIEW_MIN, IMPLICIT_VIEW_MIN, IMPLICIT_VIEW_MIN);
-    nextMesh.scale.set(span, span, span);
+    const span = IMPLICIT_VIEW_MAX - IMPLICIT_VIEW_MIN; // 10
+    // MarchingCubes geometry natively generates coordinates in [-1, 1].
+    // To map [-1, 1] back to [-5, 5] (which is IMPLICIT_VIEW_MIN to MAX),
+    // we just scale by (span / 2) because 1 * 5 = 5, -1 * 5 = -5.
+    // However, MarchingCubes grid spans from 0 to resolution-1, mapping to [-1 + 1/N, 1 - 1/N].
+    // A scale of span/2 centers the object near (0,0,0), but the grid is slightly off-center
+    // since it spans [-1, 1 - 2/N]. We add a translation T = halfSpan / (N-1) to perfectly snap it.
+    const halfSpan = span / 2;
+    const T = halfSpan / (IMPLICIT_MC_RESOLUTION - 1);
+    nextMesh.position.set(T, T, T);
+    // Apply scale multiplier with sub-cell adjustment to perfectly bound 0 to N-1 against world unit max.
+    // MarchingCubes uses size-1 cells, so we scale by halfSpan * (N / (N-1))
+    const scale = halfSpan * (IMPLICIT_MC_RESOLUTION / (IMPLICIT_MC_RESOLUTION - 1));
+    nextMesh.scale.set(scale, scale, scale);
     meshRef.current = nextMesh;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- exposing created three object to JSX render tree
     setMeshNode(nextMesh);
@@ -246,22 +257,8 @@ export function ImplicitMarchingCubes3D({
       const field = mesh.field;
       field.fill(Number.NaN);
 
-      const fn = ceCompileImplicitFromLatex(latex) ?? (() => {
-        const plain = toPlainExpression(latex, "none");
-        if (!/=/.test(plain)) return null;
-        const [lhs, rhs = "0"] = plain.split("=");
-        if (!lhs.trim()) return null;
-        return ceCompile(`(${lhs})-(${rhs})`);
-      })();
-      if (!fn) {
-        toast.error("Failed to compile implicit 3D equation.", {
-          id: `implicit3d-compile-${expressionId}`,
-        });
-        return;
-      }
-
       const sampled = await sampleImplicitField(
-        fn,
+        latex,
         scope,
         IMPLICIT_MC_RESOLUTION,
         abortController.signal,
@@ -289,6 +286,12 @@ export function ImplicitMarchingCubes3D({
       mesh.enableUvs = false;
       mesh.enableColors = false;
       mesh.update();
+
+      if (mesh.count >= IMPLICIT_MAX_POLYGONS * 3) {
+        toast.error("3D implicit mesh hit polygon budget. Reduce complexity or resolution.", {
+          id: `implicit3d-polycap-${expressionId}`,
+        });
+      }
     };
 
     build().catch(() => {
@@ -310,17 +313,42 @@ export function ImplicitMarchingCubes3D({
 /* ── Axis labels ────────────────────────────────────── */
 
 export function AxisLabels({ color }: { color: string }) {
+  // We map Three.js X => Math X, Three.js Y => Math Z, Three.js Z => Math Y
+  const labels: React.ReactNode[] = [];
+  for (let i = -5; i <= 5; i++) {
+    if (i === 0) continue;
+    // Math X (Three.js X)
+    labels.push(
+      <Text key={`x-${i}`} position={[i, -0.4, 0]} fontSize={0.2} color={color} anchorX="center" anchorY="top">
+        {i}
+      </Text>
+    );
+    // Math Y (Three.js Z)
+    labels.push(
+      <Text key={`y-${i}`} position={[0, -0.4, i]} fontSize={0.2} color={color} anchorX="center" anchorY="top">
+        {i}
+      </Text>
+    );
+    // Math Z (Three.js Y)
+    labels.push(
+      <Text key={`z-${i}`} position={[-0.4, i, 0]} fontSize={0.2} color={color} anchorX="right" anchorY="middle">
+        {i}
+      </Text>
+    );
+  }
+
   return (
     <>
       <Text position={[6, 0, 0]} fontSize={0.4} color={color} anchorX="center" anchorY="middle">
         X
       </Text>
-      <Text position={[0, 6, 0]} fontSize={0.4} color={color} anchorX="center" anchorY="middle">
+      <Text position={[0, 0, 6]} fontSize={0.4} color={color} anchorX="center" anchorY="middle">
         Y
       </Text>
-      <Text position={[0, 0, 6]} fontSize={0.4} color={color} anchorX="center" anchorY="middle">
+      <Text position={[0, 6, 0]} fontSize={0.4} color={color} anchorX="center" anchorY="middle">
         Z
       </Text>
+      {labels}
     </>
   );
 }

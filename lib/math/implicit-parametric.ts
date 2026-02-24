@@ -33,22 +33,28 @@ function parseRadiusSquared(value: string): number | null {
 const POW2 = String.raw`\^\(?2\)?`;
 
 export function tryParametrizeImplicit(expr: string): ImplicitParametricForm | null {
-  const compact = expr.replace(/\s+/g, "");
+  // Normalize: remove spacing and explicit multiplication signs
+  const normalized = expr.replace(/\s+/g, "").replace(/\*/g, "");
 
-  const xEq = compact.match(/^x=([+-]?\d*\.?\d+)$/) ?? compact.match(/^([+-]?\d*\.?\d+)=x$/);
+  const xEq = normalized.match(/^x=([+-]?\d*\.?\d+)$/) ?? normalized.match(/^([+-]?\d*\.?\d+)=x$/);
   if (xEq?.[1]) {
     const x = parseNumber(xEq[1]);
     if (x !== null) return { kind: "line-x", x };
   }
 
-  const yEq = compact.match(/^y=([+-]?\d*\.?\d+)$/) ?? compact.match(/^([+-]?\d*\.?\d+)=y$/);
+  const yEq = normalized.match(/^y=([+-]?\d*\.?\d+)$/) ?? normalized.match(/^([+-]?\d*\.?\d+)=y$/);
   if (yEq?.[1]) {
     const y = parseNumber(yEq[1]);
     if (y !== null) return { kind: "line-y", y };
   }
 
+  // Helper for R^2 which could be a number or just a digit
+  const POW2 = String.raw`(?:\^\(?2\)?|\*\*2)`;
+  const compact = normalized;
+
   const simpleCircle = compact.match(/^x\^\(?2\)?\+y\^\(?2\)?=([+-]?\d*\.?\d+)$/)
-    ?? compact.match(/^([+-]?\d*\.?\d+)=x\^\(?2\)?\+y\^\(?2\)?$/);
+    ?? compact.match(/^([+-]?\d*\.?\d+)=x\^\(?2\)?\+y\^\(?2\)?$/)
+    ?? compact.match(/^x\^\(?2\)?\+y\^\(?2\)?-([+-]?\d*\.?\d+)=0$/);
   if (simpleCircle?.[1]) {
     const rhs = parseRadiusSquared(simpleCircle[1]);
     if (rhs !== null) {
@@ -88,6 +94,8 @@ export function tryParametrizeImplicit(expr: string): ImplicitParametricForm | n
 
   const ellipseOrigin = compact.match(new RegExp(
     String.raw`^x${POW2}\/([+-]?\d*\.?\d+)\+y${POW2}\/([+-]?\d*\.?\d+)=1$`
+  )) ?? compact.match(new RegExp(
+    String.raw`^x${POW2}\/([+-]?\d*\.?\d+)\+y${POW2}\/([+-]?\d*\.?\d+)-1=0$`
   ));
   if (ellipseOrigin) {
     const a2 = parseRadiusSquared(ellipseOrigin[1]);
@@ -125,6 +133,8 @@ export function tryParametrizeImplicit(expr: string): ImplicitParametricForm | n
 
   const hyperbolaXOrigin = compact.match(new RegExp(
     String.raw`^x${POW2}\/([+-]?\d*\.?\d+)-y${POW2}\/([+-]?\d*\.?\d+)=1$`
+  )) ?? compact.match(new RegExp(
+    String.raw`^x${POW2}\/([+-]?\d*\.?\d+)-y${POW2}\/([+-]?\d*\.?\d+)-1=0$`
   ));
   if (hyperbolaXOrigin) {
     const a2 = parseRadiusSquared(hyperbolaXOrigin[1]);
@@ -136,6 +146,8 @@ export function tryParametrizeImplicit(expr: string): ImplicitParametricForm | n
 
   const hyperbolaYOrigin = compact.match(new RegExp(
     String.raw`^y${POW2}\/([+-]?\d*\.?\d+)-x${POW2}\/([+-]?\d*\.?\d+)=1$`
+  )) ?? compact.match(new RegExp(
+    String.raw`^y${POW2}\/([+-]?\d*\.?\d+)-x${POW2}\/([+-]?\d*\.?\d+)-1=0$`
   ));
   if (hyperbolaYOrigin) {
     const a2 = parseRadiusSquared(hyperbolaYOrigin[1]);
@@ -146,7 +158,7 @@ export function tryParametrizeImplicit(expr: string): ImplicitParametricForm | n
   }
 
   const parabolaX2Shifted = compact.match(new RegExp(
-    String.raw`^\(x([+-]\d*\.?\d+)\)${POW2}=([+-]?\d*\.?\d+)\*\(y([+-]\d*\.?\d+)\)$`
+    String.raw`^\(x([+-]\d*\.?\d+)\)${POW2}=([+-]?\d*\.?\d+)\(y([+-]\d*\.?\d+)\)$`
   ));
   if (parabolaX2Shifted) {
     const h = parseCircleCenterOffset(parabolaX2Shifted[1]);
@@ -158,7 +170,7 @@ export function tryParametrizeImplicit(expr: string): ImplicitParametricForm | n
   }
 
   const parabolaY2Shifted = compact.match(new RegExp(
-    String.raw`^\(y([+-]\d*\.?\d+)\)${POW2}=([+-]?\d*\.?\d+)\*\(x([+-]\d*\.?\d+)\)$`
+    String.raw`^\(y([+-]\d*\.?\d+)\)${POW2}=([+-]?\d*\.?\d+)\(x([+-]\d*\.?\d+)\)$`
   ));
   if (parabolaY2Shifted) {
     const k = parseCircleCenterOffset(parabolaY2Shifted[1]);
@@ -170,22 +182,28 @@ export function tryParametrizeImplicit(expr: string): ImplicitParametricForm | n
   }
 
   const parabolaX2Origin = compact.match(new RegExp(
-    String.raw`^x${POW2}=([+-]?\d*\.?\d+)\*y$`
+    String.raw`^x${POW2}=([+-]?\d*\.?\d+)y$`
+  )) ?? compact.match(new RegExp(
+    String.raw`^y=([+-]?\d*\.?\d+)x${POW2}$`
   ));
   if (parabolaX2Origin) {
     const c = parseNumber(parabolaX2Origin[1]);
     if (c !== null && Math.abs(c) > 1e-12) {
-      return { kind: "parabola-x2", h: 0, k: 0, c };
+      const pC = compact.startsWith("y=") ? 1 / c : c;
+      return { kind: "parabola-x2", h: 0, k: 0, c: pC };
     }
   }
 
   const parabolaY2Origin = compact.match(new RegExp(
-    String.raw`^y${POW2}=([+-]?\d*\.?\d+)\*x$`
+    String.raw`^y${POW2}=([+-]?\d*\.?\d+)x$`
+  )) ?? compact.match(new RegExp(
+    String.raw`^x=([+-]?\d*\.?\d+)y${POW2}$`
   ));
   if (parabolaY2Origin) {
     const c = parseNumber(parabolaY2Origin[1]);
     if (c !== null && Math.abs(c) > 1e-12) {
-      return { kind: "parabola-y2", h: 0, k: 0, c };
+      const pC = compact.startsWith("x=") ? 1 / c : c;
+      return { kind: "parabola-y2", h: 0, k: 0, c: pC };
     }
   }
 

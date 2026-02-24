@@ -106,3 +106,12 @@ export function tryParse(expr: string): { valid: boolean; error?: string } {
     };
   }
 }
+
+/**
+ * Checks if a LaTeX string is a Leibniz derivative.
+ * Matches `\frac`, `\dfrac`, `\tfrac` and handles MathLive's `\mathrm{d}` or `d_upright`.
+ */
+export function isLeibnizDerivativeLatex(latex: string): boolean {
+  return /(?:\\frac|\\dfrac|\\tfrac)\{(?:\\mathrm\{d\}|d)\^?\{?\d*\}?\}\{(?:\\mathrm\{d\}|d)\s*[a-zA-Z]\^?\{?\d*\}?\}/.test(latex)
+    || /d_upright/.test(latex);
+}

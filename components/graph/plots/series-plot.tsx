@@ -8,6 +8,11 @@ import { evaluateSeriesPartialSum, evaluateSeriesPartialProd, safeEval } from "@
 import { useCompiledFn, useCompiledFromLatex, useSliderScope } from "@/hooks";
 import type { Expression } from "@/types";
 
+function normalizeBound(bound: string): string {
+  const trimmed = bound.trim();
+  return trimmed.includes("=") ? trimmed.split("=").pop()!.trim() : trimmed;
+}
+
 export const SeriesPlot = memo(function SeriesPlot({ expression }: { expression: Expression }) {
   const raw = latexToExpr(expression.latex);
   const scope = useSliderScope();
@@ -58,16 +63,19 @@ function SumPlot({
   scope: Record<string, number>;
   color: string;
 }) {
-  const lowerNum = Number(lowerStr);
-  const upperNum = Number(upperStr);
+  const lowerExpr = normalizeBound(lowerStr);
+  const upperExpr = normalizeBound(upperStr);
+
+  const lowerNum = Number(lowerExpr);
+  const upperNum = Number(upperExpr);
   const lowerVar = !isFinite(lowerNum);
   const upperVar = !isFinite(upperNum);
-  const lowerFromLatex = useCompiledFromLatex(lowerVar ? lowerStr.trim() : "");
-  const lowerFromPlain = useCompiledFn(lowerVar ? lowerStr.trim() : "", !lowerFromLatex);
+  const lowerFromLatex = useCompiledFromLatex(lowerVar ? lowerExpr : "");
+  const lowerFromPlain = useCompiledFn(lowerVar ? lowerExpr : "", !lowerFromLatex);
   const lowerCompiled = lowerFromLatex ?? lowerFromPlain;
 
-  const upperFromLatex = useCompiledFromLatex(upperVar ? upperStr.trim() : "");
-  const upperFromPlain = useCompiledFn(upperVar ? upperStr.trim() : "", !upperFromLatex);
+  const upperFromLatex = useCompiledFromLatex(upperVar ? upperExpr : "");
+  const upperFromPlain = useCompiledFn(upperVar ? upperExpr : "", !upperFromLatex);
   const upperCompiled = upperFromLatex ?? upperFromPlain;
 
   return (
@@ -81,7 +89,9 @@ function SumPlot({
             ? Math.floor(upperCompiled ? safeEval(upperCompiled, { ...scope, x }) : NaN)
             : upperNum;
           if (!isFinite(lo) || !isFinite(hi) || hi - lo > 1000) return NaN;
-          return evaluateSeriesPartialSum(body, variable, lo, hi, { ...scope, x });
+          const result = evaluateSeriesPartialSum(body, variable, lo, hi, { ...scope, x });
+          if (!isFinite(result) || Math.abs(result) > 1e6) return NaN;
+          return result;
         } catch {
           return NaN;
         }
@@ -106,16 +116,19 @@ function ProdPlot({
   scope: Record<string, number>;
   color: string;
 }) {
-  const lowerNum = Number(lowerStr);
-  const upperNum = Number(upperStr);
+  const lowerExpr = normalizeBound(lowerStr);
+  const upperExpr = normalizeBound(upperStr);
+
+  const lowerNum = Number(lowerExpr);
+  const upperNum = Number(upperExpr);
   const lowerVar = !isFinite(lowerNum);
   const upperVar = !isFinite(upperNum);
-  const lowerFromLatex = useCompiledFromLatex(lowerVar ? lowerStr.trim() : "");
-  const lowerFromPlain = useCompiledFn(lowerVar ? lowerStr.trim() : "", !lowerFromLatex);
+  const lowerFromLatex = useCompiledFromLatex(lowerVar ? lowerExpr : "");
+  const lowerFromPlain = useCompiledFn(lowerVar ? lowerExpr : "", !lowerFromLatex);
   const lowerCompiled = lowerFromLatex ?? lowerFromPlain;
 
-  const upperFromLatex = useCompiledFromLatex(upperVar ? upperStr.trim() : "");
-  const upperFromPlain = useCompiledFn(upperVar ? upperStr.trim() : "", !upperFromLatex);
+  const upperFromLatex = useCompiledFromLatex(upperVar ? upperExpr : "");
+  const upperFromPlain = useCompiledFn(upperVar ? upperExpr : "", !upperFromLatex);
   const upperCompiled = upperFromLatex ?? upperFromPlain;
 
   return (
@@ -129,7 +142,9 @@ function ProdPlot({
             ? Math.floor(upperCompiled ? safeEval(upperCompiled, { ...scope, x }) : NaN)
             : upperNum;
           if (!isFinite(lo) || !isFinite(hi) || hi - lo > 1000) return NaN;
-          return evaluateSeriesPartialProd(body, variable, lo, hi, { ...scope, x });
+          const result = evaluateSeriesPartialProd(body, variable, lo, hi, { ...scope, x });
+          if (!isFinite(result) || Math.abs(result) > 1e6) return NaN;
+          return result;
         } catch {
           return NaN;
         }

@@ -1,5 +1,6 @@
 import { getCE } from "@/lib/latex";
 import type { ExpressionKind } from "@/types";
+
 import * as rx from "./regex";
 
 /**

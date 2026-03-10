@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Line, Plot } from "mafs";
 
 import { latexToExpr } from "@/lib/latex";
@@ -34,10 +34,7 @@ export function ImplicitPlot({ expression }: { expression: Expression }) {
   })();
 
   useEffect(() => {
-    if (parametricForm || !implicitExpr) {
-      setRings([]);
-      return;
-    }
+    if (parametricForm || !implicitExpr) return;
     let cancelled = false;
     marchingSquares(
       implicitExpr,

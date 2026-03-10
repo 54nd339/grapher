@@ -1,14 +1,14 @@
 "use client";
 
-import { useRef, useEffect, useCallback, useState } from "react";
-import { Play, Pause, Trash2, Eye, EyeOff, GripVertical } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Eye, EyeOff, GripVertical,Pause, Play, Trash2 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 
 import { IconButton } from "@/components/ui";
-import { useExpressionStore } from "@/stores";
 import * as rx from "@/lib/math/regex";
+import { useExpressionStore } from "@/stores";
 import type { Expression } from "@/types";
 
 interface SliderRowProps {

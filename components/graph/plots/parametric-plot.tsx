@@ -3,10 +3,10 @@
 import { memo, useMemo } from "react";
 import { Plot } from "mafs";
 
+import { useCompiledFn, useSliderScope } from "@/hooks";
 import { latexToExpr } from "@/lib/latex";
 import { ceCompileFromLatex, safeEval } from "@/lib/math";
 import * as rx from "@/lib/math/regex";
-import { useCompiledFn, useSliderScope } from "@/hooks";
 import type { Expression } from "@/types";
 
 /**

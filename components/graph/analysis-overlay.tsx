@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, Fragment } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Point, Text } from "mafs";
 
-import { compileExpressionLatex, findZeros, findExtrema, findIntersections, tryParametrizeImplicit } from "@/lib/math";
 import { latexToExpr } from "@/lib/latex";
+import { compileExpressionLatex, findExtrema, findIntersections, findZeros, tryParametrizeImplicit } from "@/lib/math";
 import { useGraphStore } from "@/stores";
 import type { Expression } from "@/types";
 
@@ -28,10 +28,7 @@ export function AnalysisOverlay({
       expression.kind === "slider" ||
       expression.kind === "parametric" ||
       expression.kind === "polar"
-    ) {
-      setData({ zeros: [], minima: [], maxima: [] });
-      return;
-    }
+    ) return;
 
     if (expression.kind === "implicit") {
       const plain = latexToExpr(expression.latex);
@@ -70,10 +67,7 @@ export function AnalysisOverlay({
       mode: "graph-2d",
       allowUserFunctions: true,
     });
-    if (!compiled) {
-      setData({ zeros: [], minima: [], maxima: [] });
-      return;
-    }
+    if (!compiled) return;
 
     let cancelled = false;
 
@@ -160,10 +154,7 @@ export function IntersectionOverlay({
           e.kind === "differential" ||
           e.kind === "implicit"),
     );
-    if (relevantExprs.length < 2) {
-      setPoints([]);
-      return;
-    }
+    if (relevantExprs.length < 2) return;
 
     const compiled = relevantExprs.map((e) =>
       compileExpressionLatex(e.latex, {

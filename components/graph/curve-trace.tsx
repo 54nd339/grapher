@@ -3,8 +3,8 @@
 import { useMemo } from "react";
 import { Point, Text } from "mafs";
 
-import { compileExpressionLatex, tryParametrizeImplicit, safeEval } from "@/lib/math";
 import { latexToExpr } from "@/lib/latex";
+import { compileExpressionLatex, safeEval,tryParametrizeImplicit } from "@/lib/math";
 import { useGraphStore } from "@/stores";
 import type { Expression } from "@/types";
 

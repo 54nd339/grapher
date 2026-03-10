@@ -4,14 +4,18 @@ import {
   descriptiveStats,
   findZeros,
   numericalLimit,
+  simpsonIntegrate,
   solveODEText,
   taylorExpansion,
-  simpsonIntegrate,
 } from "@/lib/math";
+import * as rx from "@/lib/math/regex";
+import type { SolverCategory,SolverResult } from "@/types";
+
+import { toPlainExpression } from "./expression-resolution";
 import {
+  matrixArithmetic,
   matrixDeterminant,
   matrixEigenvalues,
-  matrixArithmetic,
   matrixEvaluate,
   matrixInverse,
   matrixRank,
@@ -24,9 +28,6 @@ import {
   vectorEvaluate,
   vectorNorm,
 } from "./linear-algebra";
-import * as rx from "@/lib/math/regex";
-import { toPlainExpression } from "./expression-resolution";
-import type { SolverResult, SolverCategory } from "@/types";
 
 /* ── Error hint messages per category ────────────────── */
 

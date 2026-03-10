@@ -1,9 +1,9 @@
 "use client";
 
 import { memo, useMemo } from "react";
-import { Polygon, Point, Text, Line } from "mafs";
+import { Line,Point, Polygon, Text } from "mafs";
 
-import { histogram, descriptiveStats, convexHull } from "@/lib/math";
+import { convexHull,descriptiveStats, histogram } from "@/lib/math";
 import type { Expression } from "@/types";
 
 /**

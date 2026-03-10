@@ -9,6 +9,7 @@
  */
 
 import { ComputeEngine, type MathJsonExpression } from "@cortex-js/compute-engine";
+
 import * as rx from "@/lib/math/regex";
 
 let _ce: ComputeEngine | null = null;

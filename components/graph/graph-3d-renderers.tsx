@@ -1,26 +1,26 @@
 "use client";
 
-import { useMemo, useRef, useCallback, useEffect, useState } from "react";
-import { useThree } from "@react-three/fiber";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Text } from "@react-three/drei";
+import { useThree } from "@react-three/fiber";
 import { toast } from "sonner";
 import * as THREE from "three";
 import { MarchingCubes } from "three/examples/jsm/objects/MarchingCubes.js";
 
 import {
-  generateSurfaceData,
-  generateCurveData,
+  GPU_GRID_SIZE,
+  IMPLICIT_MAX_POLYGONS,
+  IMPLICIT_MC_RESOLUTION,
+  IMPLICIT_VIEW_MAX,
+  IMPLICIT_VIEW_MIN,
+} from "@/lib/constants";
+import {
   buildSurfaceShaders,
   estimateZRange,
+  generateCurveData,
+  generateSurfaceData,
   sampleImplicitField,
 } from "@/lib/graph";
-import {
-  GPU_GRID_SIZE,
-  IMPLICIT_MC_RESOLUTION,
-  IMPLICIT_VIEW_MIN,
-  IMPLICIT_VIEW_MAX,
-  IMPLICIT_MAX_POLYGONS,
-} from "@/lib/constants";
 import { compileExpressionLatex, toPlainExpression } from "@/lib/math";
 
 /* ── GPU Surface (vertex-shader displacement) ────────── */

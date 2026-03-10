@@ -1,18 +1,18 @@
 "use client";
 
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import * as Popover from "@radix-ui/react-popover";
-import { useState, useMemo } from "react";
-import { Eye, EyeOff, Trash2, Copy, AlertCircle, GripVertical, MoreHorizontal } from "lucide-react";
+import { useMemo,useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import * as Popover from "@radix-ui/react-popover";
+import { AlertCircle, Copy, Eye, EyeOff, GripVertical, MoreHorizontal,Trash2 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 
+import { useDuplicateExpression, useRemoveExpression,useUpdateExpression } from "@/hooks";
 import { latexToExpr } from "@/lib/latex";
 import { tryParse } from "@/lib/math";
-import { useExpressionStore } from "@/stores";
-import { useUpdateExpression, useDuplicateExpression, useRemoveExpression } from "@/hooks";
 import * as rx from "@/lib/math/regex";
+import { useExpressionStore } from "@/stores";
 import type { Expression } from "@/types";
 
 import { ColorPicker } from "./color-picker";

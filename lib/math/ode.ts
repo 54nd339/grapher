@@ -1,6 +1,6 @@
 import { ceCompile, type EvalFn } from "./ce-compile";
 import * as rx from "./regex";
-import type { PlotPoint, ODEInitialCondition } from "./types";
+import type { ODEInitialCondition,PlotPoint } from "./types";
 
 export async function integrateWithOdex(
   f: (t: number, y: number[]) => number[],

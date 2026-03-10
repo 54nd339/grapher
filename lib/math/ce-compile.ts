@@ -9,8 +9,9 @@
 import { compile as ceCompileExpr, type Expression } from "@cortex-js/compute-engine";
 
 import { getCE, normalizeLatexInput } from "@/lib/latex";
-import { expandFunctionRefs, getRegistryVersion, parseFuncDef } from "./function-registry";
+
 import { extractIntegrals, syncSimpsonIntegrate } from "./ce-compile-integrate";
+import { expandFunctionRefs, getRegistryVersion, parseFuncDef } from "./function-registry";
 import * as rx from "./regex";
 
 export type EvalFn = (scope: Record<string, number>) => number;

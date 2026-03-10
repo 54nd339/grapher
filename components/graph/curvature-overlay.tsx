@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { Point, Plot, Text, Line } from "mafs";
+import { useEffect, useMemo, useState } from "react";
+import { Line, Plot, Point, Text } from "mafs";
 
-import { compileExpressionLatex, safeEval, curvature, implicitOsculatingCircle, tryParametrizeImplicit } from "@/lib/math";
 import { latexToExpr } from "@/lib/latex";
+import { compileExpressionLatex, curvature, implicitOsculatingCircle, safeEval, tryParametrizeImplicit } from "@/lib/math";
 import { toPlainExpression } from "@/lib/math/expression-resolution";
-import { getMathWorker } from "@/workers/math-api";
 import { useGraphStore } from "@/stores";
-import type { Expression } from "@/types";
+import { getMathWorker } from "@/workers/math-api";
+
 import type { TraceHit } from "./curve-trace";
 
 interface CurvatureOverlayProps {
@@ -43,10 +43,7 @@ export function CurvatureOverlay({ hit, scope }: CurvatureOverlayProps) {
       expression.kind === "points" ||
       expression.kind === "parametric" ||
       expression.kind === "polar"
-    ) {
-      setArcLen(null);
-      return;
-    }
+    ) return;
 
     let cancelled = false;
     const compute = async () => {

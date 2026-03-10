@@ -1,4 +1,5 @@
 import { getCE, normalizeLatexInput } from "@/lib/latex";
+
 import * as rx from "./regex";
 
 /**

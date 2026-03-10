@@ -2,6 +2,8 @@
  * Statistical computation utilities for histograms, distributions, and descriptive stats.
  */
 
+// @ts-expect-error Type declarations don't match index.js for monotone-convex-hull-2d properly
+import monotoneConvexHull from "monotone-convex-hull-2d";
 import Papa from "papaparse";
 import {
   max,
@@ -12,8 +14,6 @@ import {
   standardDeviation,
   variance,
 } from "simple-statistics";
-// @ts-expect-error Type declarations don't match index.js for monotone-convex-hull-2d properly
-import monotoneConvexHull from "monotone-convex-hull-2d";
 
 export interface DescriptiveStats {
   mean: number;

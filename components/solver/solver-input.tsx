@@ -4,8 +4,8 @@ import { useShallow } from "zustand/react/shallow";
 
 import { MathField } from "@/components/editor";
 import { Button } from "@/components/ui";
-import { useSolverStore } from "@/stores";
 import { useSolve } from "@/hooks";
+import { useSolverStore } from "@/stores";
 import type { SolverCategory } from "@/types";
 
 const PLACEHOLDER_HINTS: Record<SolverCategory, string> = {

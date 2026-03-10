@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useEffect,useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 
 import { Dropdown } from "@/components/ui";
 import { latexToExpr } from "@/lib/latex";
-import { compileExpressionLatex, getSliderSymbolFromLatex, toPlainExpression, safeEval } from "@/lib/math";
+import { compileExpressionLatex, getSliderSymbolFromLatex, safeEval,toPlainExpression } from "@/lib/math";
 import { useExpressionStore, useUIStore } from "@/stores";
 
 export function TableView() {

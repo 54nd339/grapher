@@ -20,9 +20,9 @@ import {
   ceCompileFromLatexWithFuncs,
   type EvalFn,
 } from "./ce-compile";
+import { safeEval } from "./ce-compile";
 import { isLeibnizDerivativeLatex } from "./parser";
 import * as rx from "./regex";
-import { safeEval } from "./ce-compile";
 
 export type ExpressionMode = "none" | "graph-2d" | "graph-3d" | "auto";
 

@@ -1,7 +1,9 @@
 import { cross, det, dot, eigs, evaluate, inv, norm, trace, transpose } from "mathjs";
+
+import * as rx from "@/lib/math/regex";
+
 import { ceCompile } from "./ce-compile";
 import { formatNumber, isTopLevelArithmetic, toPlain } from "./mathjs-format";
-import * as rx from "@/lib/math/regex";
 
 // --- Types ---
 type MatrixLike = number[][];

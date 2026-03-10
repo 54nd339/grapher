@@ -3,10 +3,10 @@
 import { memo } from "react";
 import { Plot } from "mafs";
 
-import { latexToExpr } from "@/lib/latex";
-import { evaluateSeriesPartialSum, evaluateSeriesPartialProd, safeEval } from "@/lib/math";
-import * as rx from "@/lib/math/regex";
 import { useCompiledFn, useCompiledFromLatex, useSliderScope } from "@/hooks";
+import { latexToExpr } from "@/lib/latex";
+import { evaluateSeriesPartialProd, evaluateSeriesPartialSum, safeEval } from "@/lib/math";
+import * as rx from "@/lib/math/regex";
 import type { Expression } from "@/types";
 
 function normalizeBound(bound: string): string {

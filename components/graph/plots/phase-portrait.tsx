@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo, useState, useEffect } from "react";
+import { memo, useEffect,useMemo, useState } from "react";
 import { Plot, Point, type vec } from "mafs";
 
 import { ceCompile } from "@/lib/math";

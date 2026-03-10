@@ -1,15 +1,15 @@
 "use client";
 
-import { memo, useMemo, useState, useEffect } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { Plot, type vec } from "mafs";
 
+import { useCompiledFromLatex, useSliderScope } from "@/hooks";
 import { latexToExpr } from "@/lib/latex";
-import { safeEval, ceCompile, ceCompileFromLatex } from "@/lib/math";
+import { ceCompile, ceCompileFromLatex, safeEval } from "@/lib/math";
 import * as rx from "@/lib/math/regex";
 import { useGraphStore } from "@/stores";
-import { useCompiledFromLatex, useSliderScope } from "@/hooks";
-import { getMathWorker } from "@/workers/math-api";
 import type { Expression } from "@/types";
+import { getMathWorker } from "@/workers/math-api";
 
 export const SlopeFieldPlot = memo(function SlopeFieldPlot({ expression }: { expression: Expression }) {
   const raw = latexToExpr(expression.latex);
@@ -17,29 +17,7 @@ export const SlopeFieldPlot = memo(function SlopeFieldPlot({ expression }: { exp
   const viewport = useGraphStore((s) => s.viewport);
 
   // Determine the ODE type and compile the RHS
-  const odeData = useMemo(() => {
-    // Second-order: y'' = f(x, y, y')
-    const secondOrderMatch = raw.match(rx.REGEX_ODE_SECOND_ORDER);
-    if (secondOrderMatch) {
-      const rhs = secondOrderMatch[1].trim();
-      return { type: "second-order" as const, rawExpr: rhs, isImplicit: false, fn: null };
-    }
-
-    // Explicit first-order: y' = f(x,y) or dy/dx = f(x,y)
-    const explicitMatch = raw.match(rx.REGEX_ODE_FIRST_ORDER);
-    if (explicitMatch) {
-      const rhs = explicitMatch[2].trim();
-      const fn = ceCompileFromLatex(rhs) ?? ceCompile(rhs);
-      return fn ? { type: "first-order" as const, rawExpr: rhs, isImplicit: false, fn } : null;
-    }
-
-    // Implicit first-order: F(x, y, y') = 0
-    if (rx.REGEX_ODE_IMPLICIT.test(raw)) {
-      return { type: "implicit" as const, rawExpr: raw, isImplicit: true, fn: null };
-    }
-
-    return null;
-  }, [raw]);
+  const odeData = useMemo(() => parseOdeData(raw), [raw]);
 
   // First-order explicit: extract RHS LaTeX for slope field rendering
   const explicitRhsLatex = useMemo(() => {
@@ -55,10 +33,7 @@ export const SlopeFieldPlot = memo(function SlopeFieldPlot({ expression }: { exp
   const [solutionPts, setSolutionPts] = useState<[number, number][]>([]);
 
   useEffect(() => {
-    if (!odeData) {
-      setSolutionPts([]);
-      return;
-    }
+    if (!odeData) return;
     let cancelled = false;
 
     (async () => {
@@ -116,6 +91,30 @@ export const SlopeFieldPlot = memo(function SlopeFieldPlot({ expression }: { exp
     </>
   );
 }, expressionEqual);
+
+function parseOdeData(raw: string) {
+  // Second-order: y'' = f(x, y, y')
+  const secondOrderMatch = raw.match(rx.REGEX_ODE_SECOND_ORDER);
+  if (secondOrderMatch) {
+    const rhs = secondOrderMatch[1].trim();
+    return { type: "second-order" as const, rawExpr: rhs, isImplicit: false, fn: null };
+  }
+
+  // Explicit first-order: y' = f(x,y) or dy/dx = f(x,y)
+  const explicitMatch = raw.match(rx.REGEX_ODE_FIRST_ORDER);
+  if (explicitMatch) {
+    const rhs = explicitMatch[2].trim();
+    const fn = ceCompileFromLatex(rhs) ?? ceCompile(rhs);
+    return fn ? { type: "first-order" as const, rawExpr: rhs, isImplicit: false, fn } : null;
+  }
+
+  // Implicit first-order: F(x, y, y') = 0
+  if (rx.REGEX_ODE_IMPLICIT.test(raw)) {
+    return { type: "implicit" as const, rawExpr: raw, isImplicit: true, fn: null };
+  }
+
+  return null;
+}
 
 function expressionEqual(a: { expression: Expression }, b: { expression: Expression }) {
   return (

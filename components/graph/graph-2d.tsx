@@ -1,19 +1,19 @@
 "use client";
 
-import { useMemo, useRef, useCallback, useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Download, RotateCcw } from "lucide-react";
-import { Mafs, Coordinates, usePaneContext, useTransformContext } from "mafs";
+import { Coordinates, Mafs, usePaneContext, useTransformContext } from "mafs";
 import { useShallow } from "zustand/react/shallow";
 
-import { useExpressionStore, useGraphStore } from "@/stores";
 import { useSliderScope } from "@/hooks";
+import { useExpressionStore, useGraphStore } from "@/stores";
 
+import { ExpressionPlot } from "./plots/expression-plot";
 import { AnalysisOverlay, IntersectionOverlay } from "./analysis-overlay";
 import { CurvatureOverlay } from "./curvature-overlay";
-import { useCurveTrace, CurveTraceDot } from "./curve-trace";
+import { CurveTraceDot, useCurveTrace } from "./curve-trace";
 import { GraphLegend } from "./graph-legend";
 import { GraphSettings } from "./graph-settings";
-import { ExpressionPlot } from "./plots/expression-plot";
 import { PolarGridOverlay } from "./polar-grid-overlay";
 import { TangentLine } from "./tangent-line";
 
@@ -137,18 +137,22 @@ export function Graph2D() {
   );
 
   const [mafsKey, setMafsKey] = useState(0);
-  const initialViewport = useRef(viewport);
+  const [initialViewBox, setInitialViewBox] = useState(() => ({
+    x: [viewport.xMin, viewport.xMax] as [number, number],
+    y: [viewport.yMin, viewport.yMax] as [number, number],
+  }));
   const paneViewportRef = useRef(viewport);
   const viewTransformRef = useRef<[number, number, number, number, number, number] | null>(null);
 
-  const viewBox = {
-    x: [initialViewport.current.xMin, initialViewport.current.xMax] as [number, number],
-    y: [initialViewport.current.yMin, initialViewport.current.yMax] as [number, number],
-  };
+  const viewBox = initialViewBox;
 
   const handleReset = useCallback(() => {
     resetViewport();
-    initialViewport.current = useGraphStore.getState().viewport;
+    const v = useGraphStore.getState().viewport;
+    setInitialViewBox({
+      x: [v.xMin, v.xMax],
+      y: [v.yMin, v.yMax],
+    });
     setMafsKey((k) => k + 1);
   }, [resetViewport]);
 

@@ -7,7 +7,7 @@ export * from "./graph-3d";
 export * from "./graph-legend";
 export * from "./graph-settings";
 export * from "./graph-viewport";
+export * from "./plots";
 export * from "./polar-grid-overlay";
 export * from "./table-view";
 export * from "./tangent-line";
-export * from "./plots";

@@ -3,10 +3,10 @@
 import { memo, useMemo } from "react";
 import { Plot } from "mafs";
 
-import { latexToExpr } from "@/lib/latex";
-import { parseDomainRestriction, safeEval, safeCompile } from "@/lib/math";
-import * as rx from "@/lib/math/regex";
 import { useCompiledFn, useCompiledFromLatex, useCompiledWithFuncs, useSliderScope } from "@/hooks";
+import { latexToExpr } from "@/lib/latex";
+import { parseDomainRestriction, safeCompile,safeEval } from "@/lib/math";
+import * as rx from "@/lib/math/regex";
 import type { Expression } from "@/types";
 
 export const AlgebraicPlot = memo(function AlgebraicPlot({ expression }: { expression: Expression }) {

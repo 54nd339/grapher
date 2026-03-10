@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, useEffect, useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { FRACTAL_VERTEX, MANDELBROT_FRAGMENT, JULIA_FRAGMENT, createShaderProgram } from "@/lib/graph";
+import { createShaderProgram,FRACTAL_VERTEX, JULIA_FRAGMENT, MANDELBROT_FRAGMENT } from "@/lib/graph";
 
 interface FractalOverlayProps {
   type: "mandelbrot" | "julia";

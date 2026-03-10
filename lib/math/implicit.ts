@@ -1,6 +1,6 @@
+import * as rx from "@/lib/math/regex";
 import type { PathRing } from "@/workers/math.worker";
 import { getMathWorker } from "@/workers/math-api";
-import * as rx from "@/lib/math/regex";
 
 export type ImplicitParametricForm =
   | { kind: "line-x"; x: number }

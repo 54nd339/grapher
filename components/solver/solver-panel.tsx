@@ -3,7 +3,7 @@
 import { X } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 
-import { Tabs, IconButton } from "@/components/ui";
+import { IconButton,Tabs } from "@/components/ui";
 import { SOLVER_TABS } from "@/lib/constants";
 import { useSolverStore } from "@/stores";
 import type { SolverCategory } from "@/types";

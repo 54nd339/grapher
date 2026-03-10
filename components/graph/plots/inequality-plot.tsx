@@ -3,11 +3,11 @@
 import { memo, useMemo } from "react";
 import { Plot, Polygon, type vec } from "mafs";
 
+import { useSliderScope } from "@/hooks";
 import { latexToExpr } from "@/lib/latex";
 import { ceCompileFromLatex, safeCompile, safeEval } from "@/lib/math";
 import * as rx from "@/lib/math/regex";
 import { useGraphStore } from "@/stores";
-import { useSliderScope } from "@/hooks";
 import type { Expression } from "@/types";
 
 export const InequalityPlot = memo(function InequalityPlot({ expression }: { expression: Expression }) {

@@ -3,9 +3,10 @@
 import { useMemo } from "react";
 import { Plot, Point, Text } from "mafs";
 
-import { compileExpressionLatex, safeEval, tryParametrizeImplicit, implicitTangentSlope } from "@/lib/math";
 import { latexToExpr } from "@/lib/latex";
+import { compileExpressionLatex, implicitTangentSlope,safeEval, tryParametrizeImplicit } from "@/lib/math";
 import { useGraphStore } from "@/stores";
+
 import type { TraceHit } from "./curve-trace";
 
 interface TangentLineProps {

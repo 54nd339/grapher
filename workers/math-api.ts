@@ -6,6 +6,7 @@
  */
 
 import * as Comlink from "comlink";
+
 import type { MathWorkerAPI } from "./math.worker";
 
 let worker: Worker | null = null;

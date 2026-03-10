@@ -1,9 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import * as Checkbox from "@radix-ui/react-checkbox";
 import * as Popover from "@radix-ui/react-popover";
 import { Check, Settings } from "lucide-react";
-import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 
 import { useGraphStore } from "@/stores";

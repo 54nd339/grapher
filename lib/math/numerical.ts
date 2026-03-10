@@ -1,5 +1,6 @@
-import { ceCompile } from "./ce-compile";
 import { getMathWorker } from "@/workers/math-api";
+
+import { ceCompile } from "./ce-compile";
 
 /**
  * Numerical integration via composite Simpson's rule.

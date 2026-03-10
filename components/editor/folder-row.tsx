@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronRight, ChevronDown, Trash2, Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus,Trash2 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 
 import { IconButton } from "@/components/ui";

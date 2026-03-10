@@ -1,13 +1,13 @@
 "use client";
 
-import { memo, useMemo, useState, useEffect } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { Plot, Polygon, Polyline, type vec } from "mafs";
 
-import { latexToExpr, getCE } from "@/lib/latex";
-import { ceCompileFromLatex, type EvalFn, safeEval, simpsonIntegrate } from "@/lib/math";
 import { useCompiledFn, useCompiledFromLatex, useSliderScope } from "@/hooks";
-import { useGraphStore } from "@/stores";
+import { getCE, latexToExpr } from "@/lib/latex";
+import { ceCompileFromLatex, type EvalFn, safeEval, simpsonIntegrate } from "@/lib/math";
 import * as rx from "@/lib/math/regex";
+import { useGraphStore } from "@/stores";
 import type { Expression } from "@/types";
 
 export const CalculusPlot = memo(function CalculusPlot({ expression }: { expression: Expression }) {
@@ -202,10 +202,7 @@ function VariableBoundIntegralPlot({
   const [points, setPoints] = useState<vec.Vector2[]>([]);
 
   useEffect(() => {
-    if (!bodyCompiled) {
-      setPoints([]);
-      return;
-    }
+    if (!bodyCompiled) return;
     let cancelled = false;
 
     (async () => {
@@ -238,7 +235,7 @@ function VariableBoundIntegralPlot({
     })();
 
     return () => { cancelled = true; };
-  }, [bodyCompiled, lowerCompiled, upperCompiled, scope, viewport.xMin, viewport.xMax, integVar]);
+  }, [bodyCompiled, lowerCompiled, upperCompiled, scope, viewport.xMin, viewport.xMax, integVar, body]);
 
   if (!bodyCompiled || points.length === 0) return null;
 

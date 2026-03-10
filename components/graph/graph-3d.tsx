@@ -1,10 +1,10 @@
 "use client";
 
-import { Component, useMemo, useRef, useCallback, useEffect, useState, type ReactNode } from "react";
-import { RotateCcw, Grid3X3, Download, AlertTriangle } from "lucide-react";
-import { OrbitControls, Grid } from "@react-three/drei";
-import { Canvas } from "@react-three/fiber";
+import { Component, type ReactNode,useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "next-themes";
+import { Grid,OrbitControls } from "@react-three/drei";
+import { Canvas } from "@react-three/fiber";
+import { AlertTriangle,Download, Grid3X3, RotateCcw } from "lucide-react";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
 import { getSliderSymbolFromLatex, toPlainExpression } from "@/lib/math";

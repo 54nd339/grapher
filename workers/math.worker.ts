@@ -9,9 +9,9 @@
 import * as Comlink from "comlink";
 import { isoLines } from "marching-squares";
 
+import { IMPLICIT_TIME_BUDGET_MS,IMPLICIT_VIEW_MAX, IMPLICIT_VIEW_MIN } from "@/lib/constants";
 import { ceCompile, ceCompileFromLatex, ceCompileImplicitFromLatex, safeEval } from "@/lib/math/ce-compile";
-import { rk4, integrateWithOdex, secondOrderToSystem, rearrangeImplicitODE } from "@/lib/math/ode";
-import { IMPLICIT_VIEW_MIN, IMPLICIT_VIEW_MAX, IMPLICIT_TIME_BUDGET_MS } from "@/lib/constants";
+import { integrateWithOdex, rearrangeImplicitODE,rk4, secondOrderToSystem } from "@/lib/math/ode";
 import type { PlotPoint } from "@/lib/math/types";
 
 export type PathRing = [number, number][];

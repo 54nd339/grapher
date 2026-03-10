@@ -1,6 +1,9 @@
 name: Build & Publish Docker Image
 
-on: pull_request
+on:
+  pull_request:
+    branches:
+      - main
 
 env:
   IMAGE_NAME: 54nd33p/grapher
@@ -29,6 +32,6 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ env.IMAGE_NAME }}:latest
-          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:latest
+          tags: ${{ env.IMAGE_NAME }}:legacy
+          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:legacy
           cache-to: type=inline
